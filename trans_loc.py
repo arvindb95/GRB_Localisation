@@ -420,7 +420,7 @@ def simulated_dph(grbdir,grid_dir,run_theta,run_phi,typ,t_src,alpha,beta,E0,A):
         Function that creates simulated dph and badpixmap
         from given simulated data and badpix files respectively.
         """
-        filenames = glob.glob(grid_dir+ "/T{th:06.2f}_P{ph:06.2f}/*.fits".format(th=run_theta,ph=run_phi))
+        filenames = glob.glob(grid_dir+ "/T{th:06.2f}_P{ph:06.2f}/*.fits.gz".format(th=run_theta,ph=run_phi))
         badpixfile = glob.glob(grbdir + "/*badpix*.fits")[0]
 	print "No. of fits files for  this direction :",len(filenames)
         filenames.sort()
