@@ -430,7 +430,7 @@ def simulated_dph(grbdir,grid_dir,run_theta,run_phi,typ,t_src,alpha,beta,E0,A):
         sel  = (en>=100) & (en <= 150)
         en_range = np.zeros(len(filenames))
         for f in range(len(filenames)):
-                en_range[f] = filenames[f][-28:-21]
+                en_range[f] = filenames[f][-31:-24]
         err_100_500 = (100.0 <= en_range.astype(np.float)) & (en_range.astype(np.float) <= 500.0)
         err_500_1000 = (500.0 < en_range.astype(np.float)) & (en_range.astype(np.float) <= 1000.0)
         err_1000_2000 = (1000.0 < en_range.astype(np.float)) & (en_range.astype(np.float) <= 2000.0)
@@ -444,7 +444,7 @@ def simulated_dph(grbdir,grid_dir,run_theta,run_phi,typ,t_src,alpha,beta,E0,A):
 			print "Reading file : ",f
                         print "---------------------------------------------------------"
                         data = fits.getdata(f)
-                        E = np.append(E, float(f[-28:-21]))
+                        E = np.append(E, float(f[-31:-24]))
                         error = np.sqrt(data)
                         data[:,~sel] = 0.
                         error[:,~sel] = 0.
