@@ -2,8 +2,8 @@
     Code for localising grb's from mass model grid data and pipeline cleaned data files.
     Returns chi_sq contour plots and dph's.
 
-    Version 1.0
-    January 3 2018
+    Version 1.1
+    January 12 2018
     Arvind Balasubramanian
 
 """
@@ -430,7 +430,10 @@ def simulated_dph(grbdir,grid_dir,run_theta,run_phi,typ,t_src,alpha,beta,E0,A):
         sel  = (en>=100) & (en <= 150)
         en_range = np.zeros(len(filenames))
         for f in range(len(filenames)):
-                en_range[f] = filenames[f][-31:-24]
+                #en_range[f] = filenames[f][-31:-24] Older way. Very clumsy if you change the path!!!
+                fits_file = fits.open(filenames[f])
+                hdr = fits_file[0].header
+                en_range[f] = hdr["ENERGY"]
         err_100_500 = (100.0 <= en_range.astype(np.float)) & (en_range.astype(np.float) <= 500.0)
         err_500_1000 = (500.0 < en_range.astype(np.float)) & (en_range.astype(np.float) <= 1000.0)
         err_1000_2000 = (1000.0 < en_range.astype(np.float)) & (en_range.astype(np.float) <= 2000.0)
@@ -444,7 +447,10 @@ def simulated_dph(grbdir,grid_dir,run_theta,run_phi,typ,t_src,alpha,beta,E0,A):
 			print "Reading file : ",f
                         print "---------------------------------------------------------"
                         data = fits.getdata(f)
-                        E = np.append(E, float(f[-31:-24]))
+                        fits_file = fits.open(f)
+                        hdr = fits_file[0].header
+                        E = np.append(E,float(hdr["ENERGY"]))
+                        # E = np.append(E, float(f[-31:-24])) Older way. Very clumsy if you change the path!!!
                         error = np.sqrt(data)
                         data[:,~sel] = 0.
                         error[:,~sel] = 0.
