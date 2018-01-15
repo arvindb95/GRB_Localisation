@@ -869,9 +869,11 @@ def plot_sim_data_dphs(pdf_file,grb_name,trans_theta,trans_phi,pix_theta,pix_phi
     grb_dph_corr = grb_dph*badpix_mask
     src_dph_corr = (grb_dph - bkgd_dph*t_src/t_tot)*badpix_mask
     bkgd_dph_corr = bkgd_dph*badpix_mask*t_src/t_tot
+	
+    total_counts = src_dph.sum()     
 
     f,((ax1,ax2),(ax3,ax4)) = plt.subplots(2,2)
-    plt.suptitle('DPHs after badpix correction for '+grb_name + r" $\theta_{{grb}}$={tg:0.1f} and $\phi_{{grb}}$={pg:0.1f}".format(tg=trans_theta,pg=trans_phi)+"\n"+r"Pixel (for simulated dph) : $\theta$={t:0.1f} and $\phi$={p:0.1f}".format(t=pix_theta,p=pix_phi))
+    plt.suptitle('DPHs after badpix correction for '+grb_name + r" $\theta_{{grb}}$={tg:0.1f} and $\phi_{{grb}}$={pg:0.1f}".format(tg=trans_theta,pg=trans_phi)+"\n"+r"Pixel (for simulated dph) : $\theta$={t:0.1f} and $\phi$={p:0.1f}i".format(t=pix_theta,p=pix_phi)+"\n"+r"Total observed counts={c:0.2f}".format(c=total_counts))
             
             # Source + Background	
     plot_binned_dph(f,ax1,"Src + Bkgd DPH",grb_dph_corr,pixbin)
@@ -1170,11 +1172,11 @@ if __name__ == "__main__":
 
     # Calculating chi_sq before and after scaling
     
-    chi_sq_wo_sca_arr, chi_sq_sca_arr = calc_chi_sq(loc_txt_file,pdf_file,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,alpha,beta,E0,A)
+    ##chi_sq_wo_sca_arr, chi_sq_sca_arr = calc_chi_sq(loc_txt_file,pdf_file,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,alpha,beta,E0,A)
     
     print "========================================================================================"
 
-    # Plotting the contour plots
+    # Plotting the contour plots (The data is read out from the files)
     
     tab = Table.read(loc_txt_file,format='ascii')
 
