@@ -1026,7 +1026,7 @@ def plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,sel_theta_arr,sel_p
 
     map = Basemap(projection="ortho",llcrnrx=-2.5*search_radius*10**5,llcrnry=-2.5*search_radius*10**5,urcrnrx=2.5*search_radius*10**5,urcrnry=2.5*search_radius*10**5, lat_0=90-trans_theta,lon_0=trans_phi)
     map_Xi, map_Yi = map(Xi,Yi)
-    map.contour(map_Xi,map_Yi,Z1,[74.397*sca_1,88.379*sca_1],colors=["C0","C1"],linewidths=0.75)
+    map.contour(map_Xi,map_Yi,Z1,[76.630*sca_1,90.802*sca_1],colors=["C0","C1"],linewidths=0.75)
     x_trans, y_trans = map(trans_phi, 90-trans_theta)
     map.plot(x_trans,y_trans,"k+")
     map.drawmeridians(np.arange(0,360,30), lables=np.arange(0,360,30))
@@ -1172,7 +1172,7 @@ if __name__ == "__main__":
 
     # Calculating chi_sq before and after scaling
     
-    ##chi_sq_wo_sca_arr, chi_sq_sca_arr = calc_chi_sq(loc_txt_file,pdf_file,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,alpha,beta,E0,A)
+    chi_sq_wo_sca_arr, chi_sq_sca_arr = calc_chi_sq(loc_txt_file,pdf_file,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,alpha,beta,E0,A)
     
     print "========================================================================================"
 
