@@ -318,7 +318,7 @@ def get_center(depth,trans_theta,trans_phi):
     """
 
     htm_grid = es.htm.HTM(depth=depth)
-    pix_id = htm_grid.lookup_id(trans_phi,trans_theta)[0]
+    pix_id = htm_grid.lookup_id(90-trans_phi,90-trans_theta)[0]
 
     v1,v2,v3 = htm_grid.get_vertices(pix_id)
     center = (v1+v2+v3)/3.0
@@ -1137,7 +1137,7 @@ if __name__ == "__main__":
 
     print "The coordinates of the transient in CZTI frame are : THETA = ",trans_theta,", PHI = ",trans_phi
 
-    pix_id, pix_theta, pix_phi = get_center(depth,90-trans_theta,90-trans_phi)
+    pix_id, pix_theta, pix_phi = get_center(depth,trans_theta,trans_phi)
 
     #print "The pixel in which the transient lies is : ",pix_id,"(for depth = ",depth,")" 
     print "The coordinates of the pixel are : THETA = ",pix_theta,", PHI = ",pix_phi
