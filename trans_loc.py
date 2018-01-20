@@ -413,121 +413,122 @@ def model(E, alpha=-1.0, beta=-2.5, E_peak=250.0*u.keV, norm=1.0,typ="band"):
     else:
         return band(E,alpha,beta,E_peak,norm)
 
+
 # 6. Function to calculate the simulated dph
 
 def simulated_dph(grbdir,grid_dir,run_theta,run_phi,typ,t_src,alpha,beta,E0,A):
-        """
-        Function that creates simulated dph and badpixmap
-        from given simulated data and badpix files respectively.
-        """
-        filenames = glob.glob(grid_dir+ "/T{th:06.2f}_P{ph:06.2f}/*.fits.gz".format(th=run_theta,ph=run_phi))
-        badpixfile = glob.glob(grbdir + "/*badpix*.fits")[0]
-	print "No. of fits files for  this direction :",len(filenames)
-        filenames.sort()
-        pix_cnts = np.zeros((16384,len(filenames)))
-        err_pix_cnts = np.zeros((16384,len(filenames)))
-        en = np.arange(5, 261., .5)
-        sel  = (en>=100) & (en <= 150)
-        en_range = np.zeros(len(filenames))
-        for f in range(len(filenames)):
-                #en_range[f] = filenames[f][-31:-24] Older way. Very clumsy if you change the path!!!
-                fits_file = fits.open(filenames[f])
-                hdr = fits_file[0].header
-                en_range[f] = hdr["ENERGY"]
-        err_100_500 = (100.0 <= en_range.astype(np.float)) & (en_range.astype(np.float) <= 500.0)
-        err_500_1000 = (500.0 < en_range.astype(np.float)) & (en_range.astype(np.float) <= 1000.0)
-        err_1000_2000 = (1000.0 < en_range.astype(np.float)) & (en_range.astype(np.float) <= 2000.0)
-        exist_1000_2000 = np.where(err_1000_2000 == True)
-        E = np.array([])
+    """
+    Function that creates simulated dph and badpixmap
+    from given simulated data and badpix files respectively.
+    """
+    filenames = glob.glob(grid_dir+ "/T{th:06.2f}_P{ph:06.2f}/*.fits.gz".format(th=run_theta,ph=run_phi))
+    badpixfile = glob.glob(grbdir + "/*badpix*.fits")[0]
+    print "No. of fits files for  this direction :",len(filenames)
+    filenames.sort()
+    pix_cnts = np.zeros((16384,len(filenames)))
+    err_pix_cnts = np.zeros((16384,len(filenames)))
+    en = np.arange(5, 261., .5)
+    sel  = (en>=100) & (en <= 150)
+    en_range = np.zeros(len(filenames))
+    for f in range(len(filenames)):
+        #en_range[f] = filenames[f][-31:-24] Older way. Very clumsy if you change the path!!!
+        fits_file = fits.open(filenames[f])
+        hdr = fits_file[0].header
+        en_range[f] = hdr["ENERGY"]
+    err_100_500 = (100.0 <= en_range.astype(np.float)) & (en_range.astype(np.float) <= 500.0)
+    err_500_1000 = (500.0 < en_range.astype(np.float)) & (en_range.astype(np.float) <= 1000.0)
+    err_1000_2000 = (1000.0 < en_range.astype(np.float)) & (en_range.astype(np.float) <= 2000.0)
+    exist_1000_2000 = np.where(err_1000_2000 == True)
+    E = np.array([])
 
-        print "Indices where energy is in between 1000 and 2000 :",exist_1000_2000[0]
+    print "Indices where energy is in between 1000 and 2000 :",exist_1000_2000[0]
 
-        for i,f in enumerate(filenames):
-                        print "---------------------------------------------------------"
-			print "Reading file : ",f
-                        print "---------------------------------------------------------"
-                        data = fits.getdata(f)
-                        fits_file = fits.open(f)
-                        hdr = fits_file[0].header
-                        E = np.append(E,float(hdr["ENERGY"]))
-                        # E = np.append(E, float(f[-31:-24])) Older way. Very clumsy if you change the path!!!
-                        error = np.sqrt(data)
-                        data[:,~sel] = 0.
-                        error[:,~sel] = 0.
-                        pix_cnts[:,i] = data.sum(1)*model(E[i], alpha, beta, E0, A,typ)/55.5
-                        err_pix_cnts[:,i] = np.sqrt(((error*model(E[i], alpha, beta, E0, A,typ)/55.5)**2).sum(1))
-	
-	print "Energies in the directory are : ",E
-        pix_cnts_total = np.zeros((16384,))
-        err_100_500_total = np.sqrt((err_pix_cnts[:,err_100_500]**2).sum(1))*(E[err_100_500][1]-E[err_100_500][0])
-        err_500_1000_total =  np.sqrt((err_pix_cnts[:,err_500_1000]**2).sum(1))*(E[err_500_1000][1]-E[err_500_1000][0])
+    for i,f in enumerate(filenames):
+        print "---------------------------------------------------------"
+        print "Reading file : ",f
+        print "---------------------------------------------------------"
+        data = fits.getdata(f)
+        fits_file = fits.open(f)
+        hdr = fits_file[0].header
+        E = np.append(E,float(hdr["ENERGY"]))
+        # E = np.append(E, float(f[-31:-24])) Older way. Very clumsy if you change the path!!!
+        error = np.sqrt(data)
+        data[:,~sel] = 0.
+        error[:,~sel] = 0.
+        pix_cnts[:,i] = data.sum(1)*model(E[i], alpha, beta, E0, A,typ)/55.5
+        err_pix_cnts[:,i] = np.sqrt(((error*model(E[i], alpha, beta, E0, A,typ)/55.5)**2).sum(1))
+    
+    print "Energies in the directory are : ",E
+    pix_cnts_total = np.zeros((16384,))
+    err_100_500_total = np.sqrt((err_pix_cnts[:,err_100_500]**2).sum(1))*(E[err_100_500][1]-E[err_100_500][0])
+    err_500_1000_total =  np.sqrt((err_pix_cnts[:,err_500_1000]**2).sum(1))*(E[err_500_1000][1]-E[err_500_1000][0])
 
-        if (len(exist_1000_2000[0]) != 0):
-                err_1000_2000_total = np.sqrt((err_pix_cnts[:,err_1000_2000]**2).sum(1))*(E[err_1000_2000][1]-E[err_1000_2000][0])
-        else :
-                err_1000_2000_total = 0
+    if (len(exist_1000_2000[0]) != 0):
+        err_1000_2000_total = np.sqrt((err_pix_cnts[:,err_1000_2000]**2).sum(1))*(E[err_1000_2000][1]-E[err_1000_2000][0])
+    else :
+        err_1000_2000_total = 0
 
-        err_pix_cnts_total = np.sqrt(err_100_500_total**2 + err_500_1000_total**2 + err_1000_2000_total**2) # dE is 5 from 100-500, 10 from 500-1000, 20 from 1000-2000
+    err_pix_cnts_total = np.sqrt(err_100_500_total**2 + err_500_1000_total**2 + err_1000_2000_total**2) # dE is 5 from 100-500, 10 from 500-1000, 20 from 1000-2000
 
-        for i in range(16384):
-                        pix_cnts_total[i] = simps(pix_cnts[i,:], E)
+    for i in range(16384):
+        pix_cnts_total[i] = simps(pix_cnts[i,:], E)
 
-        quad0pix = pix_cnts_total[:4096]
-        quad1pix = pix_cnts_total[4096:2*4096]
-        quad2pix = pix_cnts_total[2*4096:3*4096]
-        quad3pix = pix_cnts_total[3*4096:]
+    quad0pix = pix_cnts_total[:4096]
+    quad1pix = pix_cnts_total[4096:2*4096]
+    quad2pix = pix_cnts_total[2*4096:3*4096]
+    quad3pix = pix_cnts_total[3*4096:]
 
-        err_quad0pix = err_pix_cnts_total[:4096]
-        err_quad1pix = err_pix_cnts_total[4096:2*4096]
-        err_quad2pix = err_pix_cnts_total[2*4096:3*4096]
-        err_quad3pix = err_pix_cnts_total[3*4096:]
+    err_quad0pix = err_pix_cnts_total[:4096]
+    err_quad1pix = err_pix_cnts_total[4096:2*4096]
+    err_quad2pix = err_pix_cnts_total[2*4096:3*4096]
+    err_quad3pix = err_pix_cnts_total[3*4096:]
 
-        quad0 =  np.reshape(quad0pix, (64,64), 'F')
-        quad1 =  np.reshape(quad1pix, (64,64), 'F')
-        quad2 =  np.reshape(quad2pix, (64,64), 'F')
-        quad3 =  np.reshape(quad3pix, (64,64), 'F')
+    quad0 =  np.reshape(quad0pix, (64,64), 'F')
+    quad1 =  np.reshape(quad1pix, (64,64), 'F')
+    quad2 =  np.reshape(quad2pix, (64,64), 'F')
+    quad3 =  np.reshape(quad3pix, (64,64), 'F')
 
-        err_quad0 =  np.reshape(err_quad0pix, (64,64), 'F')
-        err_quad1 =  np.reshape(err_quad1pix, (64,64), 'F')
-        err_quad2 =  np.reshape(err_quad2pix, (64,64), 'F')
-        err_quad3 =  np.reshape(err_quad3pix, (64,64), 'F')
+    err_quad0 =  np.reshape(err_quad0pix, (64,64), 'F')
+    err_quad1 =  np.reshape(err_quad1pix, (64,64), 'F')
+    err_quad2 =  np.reshape(err_quad2pix, (64,64), 'F')
+    err_quad3 =  np.reshape(err_quad3pix, (64,64), 'F')
 
-        sim_DPH = np.zeros((128,128), float)
-        sim_err_DPH = np.zeros((128,128), float)
+    sim_DPH = np.zeros((128,128), float)
+    sim_err_DPH = np.zeros((128,128), float)
 
-        sim_DPH[:64,:64] = np.flip(quad0, 0)
-        sim_DPH[:64,64:] = np.flip(quad1, 0)
-        sim_DPH[64:,64:] = np.flip(quad2, 0)
-        sim_DPH[64:,:64] = np.flip(quad3, 0)
+    sim_DPH[:64,:64] = np.flip(quad0, 0)
+    sim_DPH[:64,64:] = np.flip(quad1, 0)
+    sim_DPH[64:,64:] = np.flip(quad2, 0)
+    sim_DPH[64:,:64] = np.flip(quad3, 0)
 
 
-        sim_err_DPH[:64,:64] = np.flip(err_quad0, 0)
-        sim_err_DPH[:64,64:] = np.flip(err_quad1, 0)
-        sim_err_DPH[64:,64:] = np.flip(err_quad2, 0)
-        sim_err_DPH[64:,:64] = np.flip(err_quad3, 0)
+    sim_err_DPH[:64,:64] = np.flip(err_quad0, 0)
+    sim_err_DPH[:64,64:] = np.flip(err_quad1, 0)
+    sim_err_DPH[64:,64:] = np.flip(err_quad2, 0)
+    sim_err_DPH[64:,:64] = np.flip(err_quad3, 0)
 
-        badpix = fits.open(badpixfile)
-        dphmask = np.ones((128,128))
+    badpix = fits.open(badpixfile)
+    dphmask = np.ones((128,128))
 
-        badq0 = badpix[1].data # Quadrant 0
-        badpixmask = (badq0['PIX_FLAG']!=0)
-        dphmask[(63 - badq0['PixY'][badpixmask]) ,badq0['PixX'][badpixmask]] = 0
+    badq0 = badpix[1].data # Quadrant 0
+    badpixmask = (badq0['PIX_FLAG']!=0)
+    dphmask[(63 - badq0['PixY'][badpixmask]) ,badq0['PixX'][badpixmask]] = 0
 
-        badq1 = badpix[2].data # Quadrant 1
-        badpixmask = (badq1['PIX_FLAG']!=0)
-        dphmask[(63 - badq1['PixY'][badpixmask]), (badq1['PixX'][badpixmask]+64)] = 0
+    badq1 = badpix[2].data # Quadrant 1
+    badpixmask = (badq1['PIX_FLAG']!=0)
+    dphmask[(63 - badq1['PixY'][badpixmask]), (badq1['PixX'][badpixmask]+64)] = 0
 
-        badq2 = badpix[3].data # Quadrant 2
-        badpixmask = (badq2['PIX_FLAG']!=0)
-        dphmask[(127 - badq2['PixY'][badpixmask]), (badq2['PixX'][badpixmask]+64)] = 0
+    badq2 = badpix[3].data # Quadrant 2
+    badpixmask = (badq2['PIX_FLAG']!=0)
+    dphmask[(127 - badq2['PixY'][badpixmask]), (badq2['PixX'][badpixmask]+64)] = 0
 
-        badq3 = badpix[4].data # Quadrant 3
-        badpixmask = (badq3['PIX_FLAG']!=0)
-        dphmask[(127 - badq3['PixY'][badpixmask]), badq3['PixX'][badpixmask]] = 0
+    badq3 = badpix[4].data # Quadrant 3
+    badpixmask = (badq3['PIX_FLAG']!=0)
+    dphmask[(127 - badq3['PixY'][badpixmask]), badq3['PixX'][badpixmask]] = 0
 
-        oneD_sim = (sim_DPH*dphmask).flatten()
+    oneD_sim = (sim_DPH*dphmask).flatten()
 
-	return oneD_sim*t_src,sim_DPH*t_src,dphmask,sim_err_DPH*t_src
+    return oneD_sim*t_src,sim_DPH*t_src,dphmask,sim_err_DPH*t_src
 
 # 7. Function to calculate the dph from data
 
@@ -619,7 +620,7 @@ def fit_line_int(model,scaling,intercept):
     return scaling*model + intercept
 
 
-def calc_chi_sq(tab_filename,pdf_file,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,alpha=-1.0,beta=-2.5,E0=250,A=1):
+def calc_chi_sq(joint_tab_filename,tab_filename,pdf_file,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,alpha=-1.0,beta=-2.5,E0=250,A=1):
     """
     Calculates chi_sq with and without scaling and writes in txt table. Plots all the sim dphs in the pdf_file.
 
@@ -646,15 +647,15 @@ def calc_chi_sq(tab_filename,pdf_file,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,
     scaling_arr = np.zeros(len(sel_theta_arr))
     intercept_arr = np.zeros(len(sel_theta_arr))
 
+    all_model_arr = [] # For joint fit ################
+    all_data_arr = [] # For joint fit #################
+    all_model_err_arr = [] # For joint fit ###############
+    all_data_err_arr = [] # For joint fit ###############
+
     no_dphs = len(sel_theta_arr)
-    #fig = plt.figure()
+    
     for loc in range(no_dphs):
         loc_sim_flat,loc_sim_dph,badpix_mask,loc_sim_err_dph = simulated_dph(grbdir,grid_dir,sel_theta_arr[loc],sel_phi_arr[loc],typ,t_src,alpha,beta,E0,A)
-
-        #ax = fig.add_subplot(np.ceil(no_dphs/3.0),3,loc+1)
-	#plot_binned_dph(fig,ax,"",loc_sim_dph*badpix_mask,pixbin)
-        #ax.set_xticklabels([])
-        #ax.set_ylabel(r"$\theta$ = {th:0.1f}, $\phi$ = {ph:0.1f}".format(th=sel_theta_arr[loc],ph=sel_phi_arr[loc]),fontsize=5,rotation=90)
         
 	final_sim_dph = loc_sim_dph*badpix_mask
         final_sim_err_dph = loc_sim_err_dph*badpix_mask
@@ -698,7 +699,15 @@ def calc_chi_sq(tab_filename,pdf_file,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,
 
         chi_sq_wo_sca_arr[loc] = chi_sq_wo_sca ################## Yaaaay !!! ####################
 
-	# Calculating the scaling and offset 
+	
+    # Saving the model and data array for joint fit #####################
+        for module in range(len(model_copy)):
+	    all_model_arr.append(model_copy[module])
+            all_data_arr.append(data_copy[module])
+            all_model_err_arr.append(err_model[module])
+            all_data_err_arr.append(err_data[module]) ###################
+		
+    # Calculating the scaling and offset 
 
         param,pcov = curve_fit(fit_line_int,model_copy,data_copy)
         scaling = param[0]
@@ -723,14 +732,14 @@ def calc_chi_sq(tab_filename,pdf_file,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,
         chi_sq_sca = (((model_sca-data)**2)/((err_model_sca)**2 + (err_data)**2)).sum()
 
 	chi_sq_sca_arr[loc] = chi_sq_sca ######################## Yaaaay !!! ######################
-
-    #fig.set_size_inches([6.5,6.5])
-    #pdf_file.savefig(fig)
-
+        
     table_file = open(tab_filename,"w")
     loc_table = Table([np.around(sel_theta_arr,2),np.around(sel_phi_arr,decimals=2),np.around(chi_sq_wo_sca_arr,decimals=2),np.around(scaling_arr,decimals=2),np.around(intercept_arr,decimals=2),np.around(chi_sq_sca_arr,decimals=2)],names=['theta','phi','chi_sq_wo_sca','scaling','intercept','chi_sq_sca'])
     loc_table.write(tab_filename,format="ascii",overwrite=True)
     table_file.close()
+
+    joint_fit_table = Table([np.array(all_model_arr),np.array(all_model_err_arr),np.array(all_data_arr),np.array(all_data_err_arr)],names=["model_counts","model_err","data_counts","data_err"])
+    joint_fit_table.write(joint_tab_filename,format="ascii")
     
     return chi_sq_wo_sca_arr,chi_sq_sca_arr
 
@@ -954,7 +963,7 @@ def plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,sel_theta_arr,sel_p
 #    Z2 = griddata((sel_theta_arr,sel_phi_arr),chi_sq_sca_arr,(X[None,:],Y[:,None]),method="cubic")
 
     X = np.linspace(sel_phi_arr.min(),sel_phi_arr.max(),100)
-    Y = np.linspace(90 - sel_theta_arr.min(),90- sel_theta_arr.max(),100)
+    Y = np.linspace((90 - sel_theta_arr).min(),(90- sel_theta_arr).max(),100)
 
     Xi, Yi = np.meshgrid(X,Y)
     Z1 = griddata((sel_phi_arr,90-sel_theta_arr),chi_sq_wo_sca_arr,(X[None,:],Y[:,None]),method="cubic")
@@ -1061,6 +1070,41 @@ def plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,sel_theta_arr,sel_p
 
     return 0
 
+# Get joint fit parameters 
+
+def get_joint_fit_params(grb_name,joint_fit_file,pdf_file):
+    """
+    Calculates the joint fit parameters (slope and intercept)
+    
+    Inputs:
+    grb_name = Name of the GRB for which the parameters have to be calculated
+    joint_fit_file = file containing the observed and the predicted counts (module wise) for all points on the grid
+    pdf_file = file in which the plot is to be saved
+
+    Returns:
+    slope = slope of the joint fit line
+    intercept = intercept of the joint fit line
+    """
+    
+    joint_table = Table.read(joint_fit_file,format="ascii")
+    predicted_counts = joint_table["model_counts"]  
+    predicted_err = joint_table["model_err"]
+    observed_counts = joint_table["data_counts"]
+    observed_err = joint_table["data_err"]
+
+    param,pcov = curve_fit(fit_line_int,predicted_counts,observed_counts)
+    slope = param[0]
+    intercept = param[1] 
+
+    fig = plt.figure()
+    plt.title("Observed vs Predicted counts for "+grb_name)    
+    plt.errorbar(predicted_counts,observed_counts,xerr=predicted_err,yerr=observed_err,ecolor="C1",fmt='C0.',markersize=2,elinewidth=0.5)
+    plt.plot(predicted_counts,fit_line_int(predicted_counts,slope,intercept),"k-",linewidth=0.5, label="slope={s:0.2f}, intercept={i:0.2f}".format(s=slope,i=intercept))
+    plt.legend(loc="best",prop={'size':6})
+    
+    pdf_file.savefig(fig)
+
+    return slope,intercept
 
 ##################################### Main function begins #########################################
 
@@ -1115,13 +1159,12 @@ if __name__ == "__main__":
     path_to_plotfile = plotfile.split("/")[0]
     print path_to_plotfile
 
-
-
     grid_dir = "/mnt/nas_czti/massmodelgrid"
     depth = 4 # For now hard coded this. Let's see if we can make this better later
     
     pdf_file = PdfPages(plotfile)
     loc_txt_file = path_to_plotfile+"/"+grb_name+"_loc_table.txt"
+    joint_tab_file = path_to_plotfile+"/"+grb_name+"_joint_table.txt"
     print "======================================================================================"
 
     # R eading files containing arrays of theta and phi for the grid
@@ -1172,9 +1215,13 @@ if __name__ == "__main__":
 
     # Calculating chi_sq before and after scaling
     
-    chi_sq_wo_sca_arr, chi_sq_sca_arr = calc_chi_sq(loc_txt_file,pdf_file,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,alpha,beta,E0,A)
+    ##chi_sq_wo_sca_arr, chi_sq_sca_arr = calc_chi_sq(joint_tab_file,loc_txt_file,pdf_file,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,alpha,beta,E0,A)
     
     print "========================================================================================"
+
+    # Making and plotting the joint fit 
+
+    joint_slope, joint_intercept = get_joint_fit_params(grb_name,joint_tab_file,pdf_file)
 
     # Plotting the contour plots (The data is read out from the files)
     
@@ -1185,11 +1232,7 @@ if __name__ == "__main__":
     scaling_arr = tab['scaling'].data
     intercept_arr = tab['intercept'].data
 
-    avg_scaling = np.sum(scaling_arr)/len(scaling_arr)
-    avg_intercept = np.sum(intercept_arr)/len(intercept_arr)
-
-
-    plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,sel_theta_arr,sel_phi_arr,chi_sq_wo_sca_arr,chi_sq_sca_arr,args.radius)
+    ##plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,sel_theta_arr,sel_phi_arr,chi_sq_wo_sca_arr,chi_sq_sca_arr,args.radius)
 
     t1 = time.time()
 
