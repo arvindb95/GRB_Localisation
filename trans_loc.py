@@ -620,7 +620,120 @@ def fit_line_int(model,scaling,intercept):
     return scaling*model + intercept
 
 
-def calc_chi_sq(joint_tab_filename,tab_filename,pdf_file,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,alpha=-1.0,beta=-2.5,E0=250,A=1):
+def make_joint_table(joint_tab_filename,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,alpha=-1.0,beta=-2.5,E0=250,A=1):
+    """
+    Make the joint table and calculate the fitting parameters
+
+    Inputs:
+    joint_tab_filename = file in which the table must be saved
+    grbdir = directory containing the data for the GRB
+    grid_dir = directory in which the grid outputs are stored
+    sel_theta_arr = array of theta's of the grid points around the GRB location (deg)
+    sel_phi_arr = array of phi's of the grid points around the GRB location (deg)
+    typ = function type to use for the spectrum "band" or "powerlaw", default = "band"
+    t_src = t_90 of the source (s)
+    alpha = first power law index of the band function, default = -1.0
+    beta = second powerlaw index of the band function, default = -2.5
+    E0 = characteristic energy in keV, default = 250  (keV)
+    A = normalisation constant for the band function, default = 1
+    
+    Returns:
+    Saves table of predicted_counts, predicted_err, observed_counts, observed_err in joint_tab_filename
+    """
+
+
+    all_model_arr = [] # For joint fit ################
+    all_data_arr = [] # For joint fit #################
+    all_model_err_arr = [] # For joint fit ###############
+    all_data_err_arr = [] # For joint fit ###############
+
+    no_dphs = len(sel_theta_arr)
+
+    for loc in range(no_dphs):
+        loc_sim_flat,loc_sim_dph,badpix_mask,loc_sim_err_dph = simulated_dph(grbdir,grid_dir,sel_theta_arr[loc],sel_phi_arr[loc],typ,t_src,alpha,beta,E0,A)
+
+        final_sim_dph = loc_sim_dph*badpix_mask
+        final_sim_err_dph = loc_sim_err_dph*badpix_mask
+        final_grb_dph = grb_dph*badpix_mask
+        final_bkgd_dph = bkgd_dph*badpix_mask
+        final_grb_err_dph = np.sqrt(grb_dph)*badpix_mask
+        final_bkgd_err_dph = np.sqrt(bkgd_dph)*badpix_mask
+
+        sim_bin = resample(final_sim_dph,pixbin)
+        sim_err_bin = np.sqrt(resample(final_sim_err_dph**2,pixbin))
+        grb_bin = resample(final_grb_dph,pixbin)
+        bkgd_bin = resample(final_bkgd_dph,pixbin)
+        grb_err_bin = np.sqrt(resample(final_grb_err_dph,pixbin))
+        bkgd_err_bin = np.sqrt(resample(final_bkgd_err_dph,pixbin))
+
+        sim_flat_bin = sim_bin.flatten()
+        sim_err_flat_bin = sim_err_bin.flatten()
+        grb_flat_bin = grb_bin.flatten()
+        bkgd_flat_bin = bkgd_bin.flatten()
+        grb_err_flat_bin = grb_err_bin.flatten()
+        bkgd_err_flat_bin = bkgd_err_bin.flatten()
+
+        # Defining model and data to calculate chi_sq_wo_sca
+
+        model = sim_flat_bin
+        bkgd = bkgd_flat_bin*t_src/t_tot
+        src = grb_flat_bin
+
+        data = src - bkgd
+
+        err_src = grb_err_flat_bin
+        err_bkgd = bkgd_err_flat_bin
+        err_model = sim_err_flat_bin
+        err_data = np.sqrt(((err_src)**2) + ((err_bkgd)**2)*(t_src/t_tot)**2)
+
+    # Saving the model and data array for joint fit #####################
+        for module in range(len(model_copy)):
+            all_model_arr.append(model[module])
+            all_data_arr.append(data[module])
+            all_model_err_arr.append(err_model[module])
+            all_data_err_arr.append(err_data[module]) ###################
+
+    joint_fit_table = Table([np.array(all_model_arr),np.array(all_model_err_arr),np.array(all_data_arr),np.array(all_data_err_arr)],names=["model_counts","model_err","data_counts","data_err"])
+    joint_fit_table.write(joint_tab_filename,format="ascii")
+    
+    return 0
+
+def get_joint_fit_params(grb_name,joint_fit_file,pdf_file):
+    """
+    Calculates the joint fit parameters (slope and intercept)
+    
+    Inputs:
+    grb_name = Name of the GRB for which the parameters have to be calculated
+    joint_fit_file = file containing the observed and the predicted counts (module wise) for all points on the grid
+    pdf_file = file in which the plot is to be saved
+
+    Returns:
+    slope = slope of the joint fit line
+    intercept = intercept of the joint fit line
+    """
+
+    joint_table = Table.read(joint_fit_file,format="ascii")
+    predicted_counts = joint_table["model_counts"]
+    predicted_err = joint_table["model_err"]
+    observed_counts = joint_table["data_counts"]
+    observed_err = joint_table["data_err"]
+
+    param,pcov = curve_fit(fit_line_int,predicted_counts,observed_counts)
+    slope = param[0]
+    intercept = param[1]
+
+    fig = plt.figure()
+    plt.title("Observed vs Predicted counts for "+grb_name)
+    plt.errorbar(predicted_counts,observed_counts,xerr=predicted_err,yerr=observed_err,ecolor="C1",fmt='C0.',markersize=2,elinewidth=0.5)
+    plt.plot(predicted_counts,fit_line_int(predicted_counts,slope,intercept),"k-",linewidth=0.5, label="slope={s:0.2f}, intercept={i:0.2f}".format(s=slope,i=intercept))
+    plt.legend(loc="best",prop={'size':6})
+
+    pdf_file.savefig(fig)
+
+    return slope,intercept
+
+
+def calc_chi_sq(tab_filename,pdf_file,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,do_joint_fit,slope,intercept,alpha=-1.0,beta=-2.5,E0=250,A=1):
     """
     Calculates chi_sq with and without scaling and writes in txt table. Plots all the sim dphs in the pdf_file.
 
@@ -646,11 +759,6 @@ def calc_chi_sq(joint_tab_filename,tab_filename,pdf_file,grbdir,grid_dir,sel_the
     chi_sq_sca_arr = np.zeros(len(sel_theta_arr))
     scaling_arr = np.zeros(len(sel_theta_arr))
     intercept_arr = np.zeros(len(sel_theta_arr))
-
-    all_model_arr = [] # For joint fit ################
-    all_data_arr = [] # For joint fit #################
-    all_model_err_arr = [] # For joint fit ###############
-    all_data_err_arr = [] # For joint fit ###############
 
     no_dphs = len(sel_theta_arr)
     
@@ -698,23 +806,23 @@ def calc_chi_sq(joint_tab_filename,tab_filename,pdf_file,grbdir,grid_dir,sel_the
         chi_sq_wo_sca = (((model-data)**2)/((err_model)**2 + (err_data)**2)).sum()
 
         chi_sq_wo_sca_arr[loc] = chi_sq_wo_sca ################## Yaaaay !!! ####################
-
-	
-    # Saving the model and data array for joint fit #####################
-        for module in range(len(model_copy)):
-	    all_model_arr.append(model_copy[module])
-            all_data_arr.append(data_copy[module])
-            all_model_err_arr.append(err_model[module])
-            all_data_err_arr.append(err_data[module]) ###################
 		
     # Calculating the scaling and offset 
+        
+        if (do_joint_fit==False):
 
-        param,pcov = curve_fit(fit_line_int,model_copy,data_copy)
-        scaling = param[0]
-        intercept = param[1]
+        	param,pcov = curve_fit(fit_line_int,model_copy,data_copy)
+        	scaling = param[0]
+        	intercept = param[1]
 	
-	scaling_arr[loc] = scaling
-	intercept_arr[loc] = intercept
+		scaling_arr[loc] = scaling
+		intercept_arr[loc] = intercept
+        else :
+                scaling = slope
+                intercept = intercept
+
+                scaling_arr[loc] = scaling
+                intercept_arr[loc] = intercept
 
 	# Redefining model and data to calculate chi_sq_w_sca
 
@@ -738,8 +846,6 @@ def calc_chi_sq(joint_tab_filename,tab_filename,pdf_file,grbdir,grid_dir,sel_the
     loc_table.write(tab_filename,format="ascii",overwrite=True)
     table_file.close()
 
-    joint_fit_table = Table([np.array(all_model_arr),np.array(all_model_err_arr),np.array(all_data_arr),np.array(all_data_err_arr)],names=["model_counts","model_err","data_counts","data_err"])
-    joint_fit_table.write(joint_tab_filename,format="ascii")
     
     return chi_sq_wo_sca_arr,chi_sq_sca_arr
 
@@ -1070,41 +1176,6 @@ def plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,sel_theta_arr,sel_p
 
     return 0
 
-# Get joint fit parameters 
-
-def get_joint_fit_params(grb_name,joint_fit_file,pdf_file):
-    """
-    Calculates the joint fit parameters (slope and intercept)
-    
-    Inputs:
-    grb_name = Name of the GRB for which the parameters have to be calculated
-    joint_fit_file = file containing the observed and the predicted counts (module wise) for all points on the grid
-    pdf_file = file in which the plot is to be saved
-
-    Returns:
-    slope = slope of the joint fit line
-    intercept = intercept of the joint fit line
-    """
-    
-    joint_table = Table.read(joint_fit_file,format="ascii")
-    predicted_counts = joint_table["model_counts"]  
-    predicted_err = joint_table["model_err"]
-    observed_counts = joint_table["data_counts"]
-    observed_err = joint_table["data_err"]
-
-    param,pcov = curve_fit(fit_line_int,predicted_counts,observed_counts)
-    slope = param[0]
-    intercept = param[1] 
-
-    fig = plt.figure()
-    plt.title("Observed vs Predicted counts for "+grb_name)    
-    plt.errorbar(predicted_counts,observed_counts,xerr=predicted_err,yerr=observed_err,ecolor="C1",fmt='C0.',markersize=2,elinewidth=0.5)
-    plt.plot(predicted_counts,fit_line_int(predicted_counts,slope,intercept),"k-",linewidth=0.5, label="slope={s:0.2f}, intercept={i:0.2f}".format(s=slope,i=intercept))
-    plt.legend(loc="best",prop={'size':6})
-    
-    pdf_file.savefig(fig)
-
-    return slope,intercept
 
 ##################################### Main function begins #########################################
 
@@ -1113,9 +1184,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("configfile", nargs="?", help="Path to configfile", type=str)
     parser.add_argument("radius", help="Radius (deg) around the central pixel to do chi_sq analysis",type=int)
-    parser.add_argument("--calc_chi_sq_bool", help="Boolean to decide whether to do chi_sq analysis or not",type=bool)
+    parser.add_argument("--do_joint_fit", help="Boolean to decide whether to do joint fit or not",type=bool)
     parser.add_argument('--noloc', dest='noloc', action='store_true')
-    parser.set_defaults(calc_chi_sq_bool=True,noloc=False)
+    parser.set_defaults(do_joint_fit=True,noloc=False)
     args = parser.parse_args()
     runconf = get_configuration(args)
 
@@ -1213,15 +1284,20 @@ if __name__ == "__main__":
     
     print "========================================================================================"
 
-    # Calculating chi_sq before and after scaling
-    
-    ##chi_sq_wo_sca_arr, chi_sq_sca_arr = calc_chi_sq(joint_tab_file,loc_txt_file,pdf_file,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,alpha,beta,E0,A)
-    
-    print "========================================================================================"
-
-    # Making and plotting the joint fit 
+    # Joint fit 
+  
+    ## make_joint_table(joint_tab_filename,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,alpha,beta,E0,A)
 
     joint_slope, joint_intercept = get_joint_fit_params(grb_name,joint_tab_file,pdf_file)
+
+
+    # Calculating chi_sq before and after scaling
+    
+    chi_sq_wo_sca_arr, chi_sq_sca_arr = calc_chi_sq(loc_txt_file,pdf_file,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,args.do_joint_fit,joint_slope,joint_intercept,alpha,beta,E0,A)
+    
+
+    print "========================================================================================"
+
 
     # Plotting the contour plots (The data is read out from the files)
     
@@ -1232,7 +1308,7 @@ if __name__ == "__main__":
     scaling_arr = tab['scaling'].data
     intercept_arr = tab['intercept'].data
 
-    ##plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,sel_theta_arr,sel_phi_arr,chi_sq_wo_sca_arr,chi_sq_sca_arr,args.radius)
+    plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,sel_theta_arr,sel_phi_arr,chi_sq_wo_sca_arr,chi_sq_sca_arr,args.radius)
 
     t1 = time.time()
 
