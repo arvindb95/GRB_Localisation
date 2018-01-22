@@ -21,6 +21,7 @@ import astropy.units as u
 import esutil as es
 from astropy.stats import sigma_clip, sigma_clipped_stats
 from scipy.integrate import simps
+from scipy.integrate import quad
 from scipy.optimize import curve_fit
 from mpl_toolkits.mplot3d import Axes3D
 from scipy.interpolate import griddata
@@ -413,6 +414,28 @@ def model(E, alpha=-1.0, beta=-2.5, E_peak=250.0*u.keV, norm=1.0,typ="band"):
     else:
         return band(E,alpha,beta,E_peak,norm)
 
+def calc_norm(fluence, emin, emax, t_src, alpha=-1.0, beta=-2.5, E_peak=250.0*u.keV, typ="band"):
+    """
+    Returns norm for the spectral function
+
+    fluence = fluence of the source (ergs/cm^2)
+    emin = Minimum of the range over which above fluence is stated (keV)
+    emax = Maximum of the range over which above fluence is stated (keV)
+    alpha = first powerlaw parameter
+    beta = second powerlaw parameter
+    E_peak =  E peak for the fit
+    typ = spectral type
+
+    Returns: Norm 
+    """ 
+    def f(E,alpha,beta,E0,A,typ):
+        return model(E,alpha,beta,E0,A,typ)*E
+
+    I = quad(f,emin,emax,args=(alpha,beta,E0,1,typ))[0]*t_src*u.keV.to(u.erg)
+
+    Norm = fluence/I
+
+    return Norm 
 
 # 6. Function to calculate the simulated dph
 
@@ -595,7 +618,7 @@ def data_bkgd_image(grbdir,infile,pre_tstart,pre_tend,grb_tstart,grb_tend,post_t
 
     return oneD_grbdph,oneD_bkgddph,grbdph,bkgddph,t_src,t_total
 
-def inject_grb(inject_theta,inject_phi,evt_file,grbdir,grid_dir,pre_tstart,pre_tend,post_tstart,post_tend,t_src,typ,alpha,beta,E0,A):
+def inject_grb(inject_theta,inject_phi,evt_file,grbdir,grid_dir,pre_tstart,pre_tend,post_tstart,post_tend,t_src,typ,alpha,beta,E0,fluence,emin,emax):
     """
     Injects a GRB in a given direction and gets the source (with noise) and background DPH
     
@@ -612,6 +635,9 @@ def inject_grb(inject_theta,inject_phi,evt_file,grbdir,grid_dir,pre_tstart,pre_t
     Returns:
     Source (noise added) and background DPH 
     """
+    
+    A = calc_norm(fluence, emin, emax, t_src, alpha, beta, E0,"band")
+
     sim_flat,sim_dph,badpix_mask,sim_err_dph = simulated_dph(grbdir,grid_dir,pix_theta,pix_phi,typ,t_src,alpha,beta,E0,A)
 
     pre_dph = evt2image(evt_file,pre_tstart,pre_tend)
@@ -621,9 +647,10 @@ def inject_grb(inject_theta,inject_phi,evt_file,grbdir,grid_dir,pre_tstart,pre_t
     noise_dph = ((pre_dph/(pre_tend - pre_tstart)) - (post_dph/(post_tend - post_tstart)))*t_src
 
     src_dph = sim_dph + noise_dph
-    bkgd_dph = (pre_dph+post_dph)*t_src/t_bkgd
+    bkgd_dph = (pre_dph+post_dph)
+    grb_dph = src_dph + bkgd_dph*t_src/t_bkgd
 
-    return src_dph, bkgd_dph
+    return src_dph, bkgd_dph, grb_dph
     
 
 # 8. Function for resampling the dph (module wise or as you please) 
@@ -1214,9 +1241,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("configfile", nargs="?", help="Path to configfile", type=str)
     parser.add_argument("radius", help="Radius (deg) around the central pixel to do chi_sq analysis",type=int)
+    parser.add_argument("--do_inject_grb", help="Boolean to decide if artificial GRB should be injected or not",type=bool)
     parser.add_argument("--do_joint_fit", help="Boolean to decide whether to do joint fit or not",type=bool)
     parser.add_argument('--noloc', dest='noloc', action='store_true')
-    parser.set_defaults(do_joint_fit=True,noloc=False)
+    parser.set_defaults(do_inject_grb=False,do_joint_fit=True,noloc=False)
     args = parser.parse_args()
     runconf = get_configuration(args)
 
@@ -1266,6 +1294,10 @@ if __name__ == "__main__":
     pdf_file = PdfPages(plotfile)
     loc_txt_file = path_to_plotfile+"/"+grb_name+"_loc_table.txt"
     joint_tab_file = path_to_plotfile+"/"+grb_name+"_joint_table.txt"
+
+    fluence = 1.2e6
+    emin = 10
+    emax = 1000
     print "======================================================================================"
 
     # R eading files containing arrays of theta and phi for the grid
@@ -1303,8 +1335,13 @@ if __name__ == "__main__":
     print "========================================================================================"
 
     # Calling the function to get the data_dph 
-    flat_grb_dph,flat_bkgd_dph,grb_dph,bkgd_dph,t_src,t_tot = data_bkgd_image(grbdir,infile,pre_tstart,pre_tend,grb_tstart,grb_tend,post_tstart,post_tend)
-    src_dph = grb_dph - bkgd_dph*t_src/t_tot
+    if (args.do_inject_grb==False):
+        flat_grb_dph,flat_bkgd_dph,grb_dph,bkgd_dph,t_src,t_tot = data_bkgd_image(grbdir,infile,pre_tstart,pre_tend,grb_tstart,grb_tend,post_tstart,post_tend)
+        src_dph = grb_dph - bkgd_dph*t_src/t_tot
+    else :
+        inject_theta = ra_tran
+        inject_phi = dec_tran
+        src_dph, bkgd_dph, grb_dph = inject_grb(inject_theta,inject_phi,infile,grbdir,grid_dir,pre_tstart,pre_tend,post_tstart,post_tend,t_src,typ,alpha,beta,E0,fluence,emin,emax)
 
     sim_flat,sim_dph,badpix_mask,sim_err_dph = simulated_dph(grbdir,grid_dir,pix_theta,pix_phi,typ,t_src,alpha,beta,E0,A)
 
