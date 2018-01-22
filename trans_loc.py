@@ -595,6 +595,36 @@ def data_bkgd_image(grbdir,infile,pre_tstart,pre_tend,grb_tstart,grb_tend,post_t
 
     return oneD_grbdph,oneD_bkgddph,grbdph,bkgddph,t_src,t_total
 
+def inject_grb(inject_theta,inject_phi,evt_file,grbdir,grid_dir,pre_tstart,pre_tend,post_tstart,post_tend,t_src,typ,alpha,beta,E0,A):
+    """
+    Injects a GRB in a given direction and gets the source (with noise) and background DPH
+    
+    Inputs:
+    inject_theta = theta of the injected GRB (deg)
+    inject_phi = phi of the injected GRB (deg)
+    evt_file = the evt file to use to get background and add noise to the data
+    pre_tstart = start time for background 1 (s)
+    pre_tend = end time for background 1 (s)
+    post_tstart = start time for background 2 (s)
+    post_tend = end time for background 2 (s)
+    t_src = duration of the source (s)
+   
+    Returns:
+    Source (noise added) and background DPH 
+    """
+    sim_flat,sim_dph,badpix_mask,sim_err_dph = simulated_dph(grbdir,grid_dir,pix_theta,pix_phi,typ,t_src,alpha,beta,E0,A)
+
+    pre_dph = evt2image(evt_file,pre_tstart,pre_tend)
+    post_dph = evt2image(evt_file,post_tstart,post_tend)
+
+    t_bkgd = (pre_tend - pre_tstart) + (post_tend - post_tstart)
+    noise_dph = ((pre_dph/(pre_tend - pre_tstart)) - (post_dph/(post_tend - post_tstart)))*t_src
+
+    src_dph = sim_dph + noise_dph
+    bkgd_dph = (pre_dph+post_dph)*t_src/t_bkgd
+
+    return src_dph, bkgd_dph
+    
 
 # 8. Function for resampling the dph (module wise or as you please) 
 
