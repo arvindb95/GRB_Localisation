@@ -62,20 +62,20 @@ def get_default_configuration():
             "do_fit":True
             }
     required_config = {
-            'l2file':"_level2.evt",
-            'infile':"file.evt",
-            'mkffile':"file.mkf",
-            'trigtime':0.00,
-            'transtart':0.00,
-            'tranend':0.00,
-            'bkg1start':0.00,
-            'bkg1end':0.00,
-            'bkg2start':0.00,
-            'bkg2end':0.00,
-            'alpha':0.00,
-            'beta':0.00,
-            'E0':0.00,
-            'A':0.00
+            "l2file":"_level2.evt",
+            "infile":"file.evt",
+            "mkffile":"file.mkf",
+            "trigtime":0.00,
+            "transtart":0.00,
+            "tranend":0.00,
+            "bkg1start":0.00,
+            "bkg1end":0.00,
+            "bkg2start":0.00,
+            "bkg2end":0.00,
+            "alpha":0.00,
+            "beta":0.00,
+            "E0":0.00,
+            "A":0.00
             }
     return default_config, required_config
 
@@ -744,7 +744,7 @@ def make_joint_table(joint_tab_filename,grbdir,grid_dir,sel_theta_arr,sel_phi_ar
         err_data = np.sqrt(((err_src)**2) + ((err_bkgd)**2)*(t_src/t_tot)**2)
 
     # Saving the model and data array for joint fit #####################
-        for module in range(len(model_copy)):
+        for module in range(len(model)):
             all_model_arr.append(model[module])
             all_data_arr.append(data[module])
             all_model_err_arr.append(err_model[module])
@@ -1237,7 +1237,7 @@ def plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,sel_theta_arr,sel_p
 ##################################### Main function begins #########################################
 
 if __name__ == "__main__":
-
+    
     parser = argparse.ArgumentParser()
     parser.add_argument("configfile", nargs="?", help="Path to configfile", type=str)
     parser.add_argument("radius", help="Radius (deg) around the central pixel to do chi_sq analysis",type=int)
@@ -1295,7 +1295,7 @@ if __name__ == "__main__":
     loc_txt_file = path_to_plotfile+"/"+grb_name+"_loc_table.txt"
     joint_tab_file = path_to_plotfile+"/"+grb_name+"_joint_table.txt"
 
-    fluence = 1.2e6
+    fluence = 1.15e-5
     emin = 10
     emax = 1000
     print "======================================================================================"
@@ -1308,9 +1308,11 @@ if __name__ == "__main__":
     phi_arr = phi_tab["phi"].data
     
     # Converting the (RA,DEC) coordinates to (theta,phi).
-
-    trans_theta, trans_phi, thetax,thetay, czti_x, czti_y, czti_z, transient, earth = get_angles(mkffile, trigtime, ra_tran, dec_tran, window=10)
-
+    if (args.do_inject_grb==False):
+        trans_theta, trans_phi, thetax,thetay, czti_x, czti_y, czti_z, transient, earth = get_angles(mkffile, trigtime, ra_tran, dec_tran, window=10)
+    else :
+        trans_theta = ra_tran
+        trans_phi = dec_tran
     print "The coordinates of the transient in CZTI frame are : THETA = ",trans_theta,", PHI = ",trans_phi
 
     pix_id, pix_theta, pix_phi = get_center(depth,trans_theta,trans_phi)
@@ -1339,9 +1341,9 @@ if __name__ == "__main__":
         flat_grb_dph,flat_bkgd_dph,grb_dph,bkgd_dph,t_src,t_tot = data_bkgd_image(grbdir,infile,pre_tstart,pre_tend,grb_tstart,grb_tend,post_tstart,post_tend)
         src_dph = grb_dph - bkgd_dph*t_src/t_tot
     else :
-        inject_theta = ra_tran
-        inject_phi = dec_tran
-        src_dph, bkgd_dph, grb_dph = inject_grb(inject_theta,inject_phi,infile,grbdir,grid_dir,pre_tstart,pre_tend,post_tstart,post_tend,t_src,typ,alpha,beta,E0,fluence,emin,emax)
+        t_src = 1.0
+        print "############################# Injecting GRB at theta={t:0.2f}, phi={p:0.2f} ##########################".format(t=trans_theta,p=trans_phi)
+        src_dph, bkgd_dph, grb_dph = inject_grb(trans_theta,trans_phi,infile,grbdir,grid_dir,pre_tstart,pre_tend,post_tstart,post_tend,t_src,typ,alpha,beta,E0,fluence,emin,emax)
 
     sim_flat,sim_dph,badpix_mask,sim_err_dph = simulated_dph(grbdir,grid_dir,pix_theta,pix_phi,typ,t_src,alpha,beta,E0,A)
 
@@ -1353,7 +1355,7 @@ if __name__ == "__main__":
 
     # Joint fit 
   
-    ## make_joint_table(joint_tab_filename,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,alpha,beta,E0,A)
+    make_joint_table(joint_tab_file,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,alpha,beta,E0,A)
 
     joint_slope, joint_intercept = get_joint_fit_params(grb_name,joint_tab_file,pdf_file)
 
