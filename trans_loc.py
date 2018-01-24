@@ -636,21 +636,25 @@ def inject_grb(inject_theta,inject_phi,evt_file,grbdir,grid_dir,pre_tstart,pre_t
     Source (noise added) and background DPH 
     """
     
-    A = calc_norm(fluence, emin, emax, t_src, alpha, beta, E0,"band")
+    norm = calc_norm(fluence, emin, emax, t_src, alpha, beta, E0,"band")
 
-    sim_flat,sim_dph,badpix_mask,sim_err_dph = simulated_dph(grbdir,grid_dir,pix_theta,pix_phi,typ,t_src,alpha,beta,E0,A)
+    sim_flat,sim_dph,badpix_mask,sim_err_dph = simulated_dph(grbdir,grid_dir,inject_theta,inject_phi,typ,t_src,alpha,beta,E0,norm)
+    #print "######################## Sim Dph less than zero ##########################"
+    sim_dph[np.where(sim_dph < 0)] = 0
+    #print "##########################################################################"
+    data_dph = np.random.poisson(sim_dph) # Poisson noice at each pixel
 
     pre_dph = evt2image(evt_file,pre_tstart,pre_tend)
     post_dph = evt2image(evt_file,post_tstart,post_tend)
 
     t_bkgd = (pre_tend - pre_tstart) + (post_tend - post_tstart)
     noise_dph = ((pre_dph/(pre_tend - pre_tstart)) - (post_dph/(post_tend - post_tstart)))*t_src
-
-    src_dph = sim_dph + noise_dph
+    
+    src_dph = data_dph*t_src + noise_dph
     bkgd_dph = (pre_dph+post_dph)
     grb_dph = src_dph + bkgd_dph*t_src/t_bkgd
 
-    return src_dph, bkgd_dph, grb_dph
+    return src_dph, bkgd_dph, grb_dph, norm
     
 
 # 8. Function for resampling the dph (module wise or as you please) 
@@ -755,14 +759,13 @@ def make_joint_table(joint_tab_filename,grbdir,grid_dir,sel_theta_arr,sel_phi_ar
     
     return 0
 
-def get_joint_fit_params(grb_name,joint_fit_file,pdf_file):
+def get_joint_fit_params(grb_name,joint_fit_file):
     """
     Calculates the joint fit parameters (slope and intercept)
     
     Inputs:
     grb_name = Name of the GRB for which the parameters have to be calculated
     joint_fit_file = file containing the observed and the predicted counts (module wise) for all points on the grid
-    pdf_file = file in which the plot is to be saved
 
     Returns:
     slope = slope of the joint fit line
@@ -779,18 +782,10 @@ def get_joint_fit_params(grb_name,joint_fit_file,pdf_file):
     slope = param[0]
     intercept = param[1]
 
-    fig = plt.figure()
-    plt.title("Observed vs Predicted counts for "+grb_name)
-    plt.errorbar(predicted_counts,observed_counts,xerr=predicted_err,yerr=observed_err,ecolor="C1",fmt='C0.',markersize=2,elinewidth=0.5)
-    plt.plot(predicted_counts,fit_line_int(predicted_counts,slope,intercept),"k-",linewidth=0.5, label="slope={s:0.2f}, intercept={i:0.2f}".format(s=slope,i=intercept))
-    plt.legend(loc="best",prop={'size':6})
-
-    pdf_file.savefig(fig)
-
     return slope,intercept
 
 
-def calc_chi_sq(tab_filename,pdf_file,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,do_joint_fit,slope,intercept,alpha=-1.0,beta=-2.5,E0=250,A=1):
+def calc_chi_sq(tab_filename,pdf_file,grb_name,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,do_joint_fit,joint_fit_file,alpha=-1.0,beta=-2.5,E0=250,A=1):
     """
     Calculates chi_sq with and without scaling and writes in txt table. Plots all the sim dphs in the pdf_file.
 
@@ -867,19 +862,22 @@ def calc_chi_sq(tab_filename,pdf_file,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,
     # Calculating the scaling and offset 
         
         if (do_joint_fit==False):
+            print "################ Doing separate fit ##############"
 
-        	param,pcov = curve_fit(fit_line_int,model_copy,data_copy)
-        	scaling = param[0]
-        	intercept = param[1]
+            param,pcov = curve_fit(fit_line_int,model_copy,data_copy)
+            scaling = param[0]
+            intercept = param[1]
 	
-		scaling_arr[loc] = scaling
-		intercept_arr[loc] = intercept
+	    scaling_arr[loc] = scaling
+	    intercept_arr[loc] = intercept
         else :
-                scaling = slope
-                intercept = intercept
+            print "################ Doint joint fit #################"
+            slope, intercept = get_joint_fit_params(grb_name,joint_fit_file)
+            scaling = slope
+            intercept = intercept
 
-                scaling_arr[loc] = scaling
-                intercept_arr[loc] = intercept
+            scaling_arr[loc] = scaling
+            intercept_arr[loc] = intercept
 
 	# Redefining model and data to calculate chi_sq_w_sca
 
@@ -1042,10 +1040,11 @@ def plot_sim_data_dphs(pdf_file,grb_name,trans_theta,trans_phi,pix_theta,pix_phi
     src_dph_corr = (grb_dph - bkgd_dph*t_src/t_tot)*badpix_mask
     bkgd_dph_corr = bkgd_dph*badpix_mask*t_src/t_tot
 	
-    total_counts = src_dph.sum()     
+    total_obs_counts = src_dph_corr.sum()
+    total_sim_counts = sim_dph_corr.sum()     
 
     f,((ax1,ax2),(ax3,ax4)) = plt.subplots(2,2)
-    plt.suptitle('DPHs after badpix correction for '+grb_name + r" $\theta_{{grb}}$={tg:0.1f} and $\phi_{{grb}}$={pg:0.1f}".format(tg=trans_theta,pg=trans_phi)+"\n"+r"Pixel (for simulated dph) : $\theta$={t:0.1f} and $\phi$={p:0.1f}i".format(t=pix_theta,p=pix_phi)+"\n"+r"Total observed counts={c:0.2f}".format(c=total_counts))
+    plt.suptitle('DPHs after badpix correction for '+grb_name + r" $\theta_{{grb}}$={tg:0.1f} and $\phi_{{grb}}$={pg:0.1f}".format(tg=trans_theta,pg=trans_phi)+"\n"+r"Pixel (for simulated dph) : $\theta$={t:0.1f} and $\phi$={p:0.1f}i".format(t=pix_theta,p=pix_phi)+"\n"+r"Total counts (observed)={c:0.2f} and (predicted)={c2:0.2f}".format(c=total_obs_counts,c2=total_sim_counts))
             
             # Source + Background	
     plot_binned_dph(f,ax1,"Src + Bkgd DPH",grb_dph_corr,pixbin)
@@ -1134,6 +1133,12 @@ def plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,sel_theta_arr,sel_p
    
     sca_1 = np.nanmin(Z1)/62.0
     sca_2 = np.nanmin(Z2)/60.0
+
+    print "############## Chi sq min for unscaled data ##################"
+    print np.nanmin(Z1)
+    print "############## Chi sq min factor for scaled data ####################"
+    print np.nanmin(Z2)
+    print "#########################################################################"
 
     mesh_grid_pix_area = (X[1]-X[0])*(Y[1]-Y[0])
 
@@ -1244,7 +1249,7 @@ if __name__ == "__main__":
     parser.add_argument("--do_inject_grb", help="Boolean to decide if artificial GRB should be injected or not",type=bool)
     parser.add_argument("--do_joint_fit", help="Boolean to decide whether to do joint fit or not",type=bool)
     parser.add_argument('--noloc', dest='noloc', action='store_true')
-    parser.set_defaults(do_inject_grb=False,do_joint_fit=True,noloc=False)
+    parser.set_defaults(do_inject_grb=False,do_joint_fit=False,noloc=False)
     args = parser.parse_args()
     runconf = get_configuration(args)
 
@@ -1343,10 +1348,10 @@ if __name__ == "__main__":
     else :
         t_src = 1.0
         print "############################# Injecting GRB at theta={t:0.2f}, phi={p:0.2f} ##########################".format(t=trans_theta,p=trans_phi)
-        src_dph, bkgd_dph, grb_dph = inject_grb(trans_theta,trans_phi,infile,grbdir,grid_dir,pre_tstart,pre_tend,post_tstart,post_tend,t_src,typ,alpha,beta,E0,fluence,emin,emax)
-
+        src_dph, bkgd_dph, grb_dph, A = inject_grb(trans_theta,trans_phi,infile,grbdir,grid_dir,pre_tstart,pre_tend,post_tstart,post_tend,t_src,typ,alpha,beta,E0,fluence,emin,emax)
+    
     sim_flat,sim_dph,badpix_mask,sim_err_dph = simulated_dph(grbdir,grid_dir,pix_theta,pix_phi,typ,t_src,alpha,beta,E0,A)
-
+    
     # Plotting the badpix corrected dphs 
     
     plot_sim_data_dphs(pdf_file,grb_name,trans_theta,trans_phi,pix_theta,pix_phi,sim_dph,grb_dph,bkgd_dph,badpix_mask,t_src,t_tot,pixbin)
@@ -1354,15 +1359,13 @@ if __name__ == "__main__":
     print "========================================================================================"
 
     # Joint fit 
-  
-    make_joint_table(joint_tab_file,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,alpha,beta,E0,A)
+    if (args.do_joint_fit==True):
 
-    joint_slope, joint_intercept = get_joint_fit_params(grb_name,joint_tab_file,pdf_file)
-
+    	make_joint_table(joint_tab_file,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,alpha,beta,E0,A)
 
     # Calculating chi_sq before and after scaling
     
-    chi_sq_wo_sca_arr, chi_sq_sca_arr = calc_chi_sq(loc_txt_file,pdf_file,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,args.do_joint_fit,joint_slope,joint_intercept,alpha,beta,E0,A)
+    chi_sq_wo_sca_arr, chi_sq_sca_arr = calc_chi_sq(loc_txt_file,pdf_file,grb_name,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,args.do_joint_fit,joint_tab_file,alpha,beta,E0,A)
     
 
     print "========================================================================================"
