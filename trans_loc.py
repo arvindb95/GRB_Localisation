@@ -495,6 +495,15 @@ def simulated_dph(grbdir,grid_dir,run_theta,run_phi,typ,t_src,alpha,beta,E0,A):
 
     for i in range(16384):
         pix_cnts_total[i] = simps(pix_cnts[i,:], E)
+        if (pix_cnts_total[i] < 0):
+            pix_cnts_total[i] = simps(pix_cnts[i,:][::-1], E[::-1])
+
+    #print "################### Pix_cnts_total #################"
+    #print pix_cnts_total[np.where(pix_cnts_total < 0)[0][0]]
+    #print pix_cnts[np.where(pix_cnts_total < 0)[0][0],:]
+    #print simps(pix_cnts[np.where(pix_cnts_total < 0)[0][0],:][::-1],E[::-1])
+    #print E
+    #print "####################################################"
 
     quad0pix = pix_cnts_total[:4096]
     quad1pix = pix_cnts_total[4096:2*4096]
@@ -640,9 +649,9 @@ def inject_grb(inject_theta,inject_phi,evt_file,grbdir,grid_dir,pre_tstart,pre_t
 
     sim_flat,sim_dph,badpix_mask,sim_err_dph = simulated_dph(grbdir,grid_dir,inject_theta,inject_phi,typ,t_src,alpha,beta,E0,norm)
     #print "######################## Sim Dph less than zero ##########################"
-    sim_dph[np.where(sim_dph < 0)] = 0
+    #print np.where(sim_dph < 0)
     #print "##########################################################################"
-    data_dph = np.random.poisson(sim_dph) # Poisson noice at each pixel
+    data_dph = np.random.poisson(sim_dph) # Poisson noise at each pixel
 
     pre_dph = evt2image(evt_file,pre_tstart,pre_tend)
     post_dph = evt2image(evt_file,post_tstart,post_tend)
