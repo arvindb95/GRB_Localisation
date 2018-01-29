@@ -733,8 +733,8 @@ def make_joint_table(joint_tab_filename,grbdir,grid_dir,sel_theta_arr,sel_phi_ar
         sim_err_bin = np.sqrt(resample(final_sim_err_dph**2,pixbin))
         grb_bin = resample(final_grb_dph,pixbin)
         bkgd_bin = resample(final_bkgd_dph,pixbin)
-        grb_err_bin = np.sqrt(resample(final_grb_err_dph,pixbin))
-        bkgd_err_bin = np.sqrt(resample(final_bkgd_err_dph,pixbin))
+        grb_err_bin = np.sqrt(resample(final_grb_err_dph**2,pixbin)) # Made this change recently sqrt(err**2) and not sqrt(err)
+        bkgd_err_bin = np.sqrt(resample(final_bkgd_err_dph**2,pixbin)) # Made this change recently sqrt(err**2) and not sqrt(err)
 
         sim_flat_bin = sim_bin.flatten()
         sim_err_flat_bin = sim_err_bin.flatten()
@@ -837,8 +837,8 @@ def calc_chi_sq(tab_filename,pdf_file,grb_name,grbdir,grid_dir,sel_theta_arr,sel
         sim_err_bin = np.sqrt(resample(final_sim_err_dph**2,pixbin))
         grb_bin = resample(final_grb_dph,pixbin)
         bkgd_bin = resample(final_bkgd_dph,pixbin)
-        grb_err_bin = np.sqrt(resample(final_grb_err_dph,pixbin))
-        bkgd_err_bin = np.sqrt(resample(final_bkgd_err_dph,pixbin))
+        grb_err_bin = np.sqrt(resample(final_grb_err_dph**2,pixbin)) # Made this change recently sqrt(err**2) and not sqrt(err) 
+        bkgd_err_bin = np.sqrt(resample(final_bkgd_err_dph**2,pixbin)) # Made this change recently sqrt(err**2) and not sqrt(err)
 
         sim_flat_bin = sim_bin.flatten()
         sim_err_flat_bin = sim_err_bin.flatten()
