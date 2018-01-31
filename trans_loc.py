@@ -1104,6 +1104,32 @@ def plot_all_sim_dphs(pdf_file,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_s
     
     return 0
 
+def get_contour_area(X,Y,Z,Level):
+    """
+    Gets contour area for the Level specified by user
+     
+    Inputs:
+    X = x range
+    Y = y range
+    Z = interpolated 2d array
+    Level = Level whose area must be calculated
+
+    Retruns:
+    Area of the contour (deg^2) 
+    """
+    mesh_grid_pix_area = (X[1]-X[0])*(Y[1]-Y[0])
+
+    cont_pix_no = 0
+
+    for i in range(len(X)):
+	for j in range(len(Y)):
+	    if (Z[i,j] <= Level):
+		cont_pix_no +=1
+
+    cont_area = abs(cont_pix_no * mesh_grid_pix_area)   
+
+    return cont_area
+
 def plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,sel_theta_arr,sel_phi_arr,chi_sq_wo_sca_arr,chi_sq_sca_arr,search_radius):
     """
     Plots the 3d and contour plots for the localisation from the calculated chi_sq values at the selected locations
@@ -1125,14 +1151,6 @@ def plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,sel_theta_arr,sel_p
 
     plt.suptitle(r"$\chi^2$ plots for "+grb_name+"; Left: Without scaling, Right: With scaling")
 
-## For flat plots
-#    X = np.linspace(sel_theta_arr.min(),sel_theta_arr.max(),100)
-#    Y = np.linspace(sel_phi_arr.min(),sel_phi_arr.max(),100)
-    
-#    Xi, Yi = np.meshgrid(X,Y)
-#    Z1 = griddata((sel_theta_arr,sel_phi_arr),chi_sq_wo_sca_arr,(X[None,:],Y[:,None]),method="cubic")
-#    Z2 = griddata((sel_theta_arr,sel_phi_arr),chi_sq_sca_arr,(X[None,:],Y[:,None]),method="cubic")
-
     X = np.linspace(sel_phi_arr.min(),sel_phi_arr.max(),100)
     Y = np.linspace((90 - sel_theta_arr).min(),(90- sel_theta_arr).max(),100)
 
@@ -1148,99 +1166,70 @@ def plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,sel_theta_arr,sel_p
     print "############## Chi sq min factor for scaled data ####################"
     print np.nanmin(Z2)
     print "#########################################################################"
-
-    mesh_grid_pix_area = (X[1]-X[0])*(Y[1]-Y[0])
-
-    cont_pix_no = 0
-
-    for i in range(len(X)):
-	for j in range(len(Y)):
-	    if (Z2[i,j] <= 74.397*sca_2):
-		cont_pix_no +=1
-
-    cont_area = cont_pix_no * mesh_grid_pix_area
-
-    print "Area of the 90% contour is : ", abs(cont_area)
-
     
     ax3 = fig.add_subplot(221)
-    #ax3.set_xlabel(r"$\theta [in^{o}]$")
-    #ax3.set_ylabel(r"$\phi [in^{o}]$",rotation=90)
-    #ax3.contour(Xi,Yi,Z1,[np.nanmin(Z1)+1*sca_1,np.nanmin(Z1)+2*sca_1,np.nanmin(Z1)+3*sca_1],colors=["C0","C1","C2"],linewidths=0.75)
-    #grb = ax3.scatter(trans_theta,trans_phi,marker='+',color="k",label=grb_name)
-    #ax3.set_xlim(trans_theta-45,trans_theta+45)
-    #ax3.set_ylim(trans_phi-45,trans_phi+45)
     map = Basemap(projection="ortho",llcrnrx=-2.5*search_radius*10**5,llcrnry=-2.5*search_radius*10**5,urcrnrx=2.5*search_radius*10**5,urcrnry=2.5*search_radius*10**5, lat_0=90-trans_theta,lon_0=trans_phi)
     map_Xi, map_Yi = map(Xi,Yi)
     map.contour(map_Xi,map_Yi,Z1,[np.nanmin(Z1)+1*sca_1,np.nanmin(Z1)+2*sca_1,np.nanmin(Z1)+3*sca_1],colors=["C0","C1","C2"],linewidths=0.75)
     x_trans, y_trans = map(trans_phi, 90-trans_theta)
     grb = map.plot(x_trans,y_trans,"k+")
-    map.drawmeridians(np.arange(0,360,30), lables=np.arange(0,360,30)) 
-    map.drawparallels(np.arange(-90,90,30), lables=np.arange(180,0,-30))
+    sigma_1_area = get_contour_area(X,Y,Z1,np.nanmin(Z1)+1*sca_1)
+    sigma_2_area = get_contour_area(X,Y,Z1,np.nanmin(Z1)+2*sca_1)
+    sigma_3_area = get_contour_area(X,Y,Z1,np.nanmin(Z1)+3*sca_1)
+    map.drawmeridians(np.arange(0,360,30), labels=[0,0,0,1],labelstyle="+/-") 
+    map.drawparallels(np.arange(-90,90,30), labels=[1,0,0,0],labelstyle="+/-")
 
     line1= pl.Line2D(range(10), range(10), marker='None', linestyle='-',linewidth=0.75, color="C0")
     line2= pl.Line2D(range(10), range(10), marker='None', linestyle='-',linewidth=0.75, color="C1")
     line3= pl.Line2D(range(10), range(10), marker='None', linestyle='-',linewidth=0.75, color="C2")
-    ax3.legend(("k+",line1,line2,line3),(grb_name,r"1-$\sigma$",r"2-$\sigma$",r"3-$\sigma$"),numpoints=1,loc='upper right',prop={'size':6})
+    ax3.legend(("k+",line1,line2,line3),(grb_name,r"1-$\sigma$ area={a:0.2f}".format(a=sigma_1_area),r"2-$\sigma$ area={a:0.2f}".format(a=sigma_2_area),r"3-$\sigma$ area={a:0.2f}".format(a=sigma_3_area)),numpoints=1,loc='upper right',prop={'size':6})
 
     ax4 = fig.add_subplot(222)
-    #ax4.set_xlabel(r"$\theta [in^{o}]$")
-    #ax4.contour(Xi,Yi, Z2, [np.nanmin(Z2)+1*sca_2,np.nanmin(Z2)+2*sca_2,np.nanmin(Z2)+3*sca_2],colors=["C0","C1","C2"],linewidths=0.75)
-    #grb = ax4.scatter(trans_theta,trans_phi,marker='+',color="k",label=grb_name)
-    #ax4.set_xlim(trans_theta-45,trans_theta+45)
-    #ax4.set_ylim(trans_phi-45,trans_phi+45)
     map = Basemap(projection="ortho",llcrnrx=-2.5*search_radius*10**5,llcrnry=-2.5*search_radius*10**5,urcrnrx=2.5*search_radius*10**5,urcrnry=2.5*search_radius*10**5, lat_0=90-trans_theta,lon_0=trans_phi)
     map_Xi, map_Yi = map(Xi,Yi)
     map.contour(map_Xi,map_Yi,Z2,[np.nanmin(Z2)+1*sca_2,np.nanmin(Z2)+2*sca_2,np.nanmin(Z2)+3*sca_2],colors=["C0","C1","C2"],linewidths=0.75)
     x_trans, y_trans = map(trans_phi, 90-trans_theta)
     grb = map.plot(x_trans,y_trans,"k+")
-    map.drawmeridians(np.arange(0,360,30), lables=np.arange(0,360,30)) 
-    map.drawparallels(np.arange(-90,90,30), lables=np.arange(180,0,-30))
+    sigma_1_area_sca = get_contour_area(X,Y,Z2,np.nanmin(Z2)+1*sca_2)
+    sigma_2_area_sca = get_contour_area(X,Y,Z2,np.nanmin(Z2)+2*sca_2)
+    sigma_3_area_sca = get_contour_area(X,Y,Z2,np.nanmin(Z2)+3*sca_2)
+    map.drawmeridians(np.arange(0,360,30), labels=[0,0,0,1],labelstyle="+/-") 
+    map.drawparallels(np.arange(-90,90,30), labels=[1,0,0,0],labelstyle="+/-")
 
     line1= pl.Line2D(range(10), range(10), marker='None', linestyle='-',linewidth=0.75, color="C0")
     line2= pl.Line2D(range(10), range(10), marker='None', linestyle='-',linewidth=0.75, color="C1")
     line3= pl.Line2D(range(10), range(10), marker='None', linestyle='-',linewidth=0.75, color="C2")
-    ax4.legend(("k+",line1,line2,line3),(grb_name,r"1-$\sigma$",r"2-$\sigma$",r"3-$\sigma$"),numpoints=1,loc='upper right',prop={'size':6})
+    ax4.legend(("k+",line1,line2,line3),(grb_name,r"1-$\sigma$ area={a:0.2f}".format(a=sigma_1_area_sca),r"2-$\sigma$ area={a:0.2f}".format(a=sigma_2_area_sca),r"3-$\sigma$ area={a:0.2f}".format(a=sigma_3_area_sca)),numpoints=1,loc='upper right',prop={'size':6})
     
     ax1 = fig.add_subplot(223)
-    #ax1.set_xlabel(r"$\theta [in^{o}]$")
-    #ax1.set_ylabel(r"$\phi [in^{o}]$",rotation=90)
-    #ax1.contour(Xi, Yi, Z1, [74.397*sca_1,88.379*sca_1],colors=["C0","C1"],linewidths=0.75)
-    #grb = ax1.scatter(trans_theta,trans_phi,marker='+',color="k",label=grb_name)
-    #ax1.set_xlim(trans_theta-45,trans_theta+45)
-    #ax1.set_ylim(trans_phi-45,trans_phi+45)
-
     map = Basemap(projection="ortho",llcrnrx=-2.5*search_radius*10**5,llcrnry=-2.5*search_radius*10**5,urcrnrx=2.5*search_radius*10**5,urcrnry=2.5*search_radius*10**5, lat_0=90-trans_theta,lon_0=trans_phi)
     map_Xi, map_Yi = map(Xi,Yi)
     map.contour(map_Xi,map_Yi,Z1,[76.630*sca_1,90.802*sca_1],colors=["C0","C1"],linewidths=0.75)
     x_trans, y_trans = map(trans_phi, 90-trans_theta)
     map.plot(x_trans,y_trans,"k+")
-    map.drawmeridians(np.arange(0,360,30), lables=np.arange(0,360,30))
-    map.drawparallels(np.arange(-90,90,30), lables=np.arange(180,0,-30))
+    percent_90_area = get_contour_area(X,Y,Z1,76.630*sca_1)
+    percent_99_area = get_contour_area(X,Y,Z1,90.802*sca_1)
+    map.drawmeridians(np.arange(0,360,30), labels=[0,0,0,1],labelstyle="+/-")
+    map.drawparallels(np.arange(-90,90,30), labels=[1,0,0,0],labelstyle="+/-")
 
     line1= pl.Line2D(range(10), range(10), marker='None', linestyle='-',linewidth=0.75, color="C0")
     line2= pl.Line2D(range(10), range(10), marker='None', linestyle='-',linewidth=0.75, color="C1")
-    ax1.legend(("k+",line1,line2),(grb_name,"90 %","99 %"),numpoints=1,loc='upper right',prop={'size':6})
+    ax1.legend(("k+",line1,line2),(grb_name,"90 % area={a:0.2f}".format(a=percent_90_area),"99 % area={a:0.2f}".format(a=percent_99_area)),numpoints=1,loc='upper right',prop={'size':6})
 
-    ax2 = fig.add_subplot(224)
-    #ax2.set_xlabel(r"$\theta [in^{o}]$")
-    #cs = ax2.contour(Xi,Yi, Z2, [74.397*sca_2,88.379*sca_2],colors=["C0","C1"],linewidths=0.75)
-    #grb = ax2.scatter(trans_theta,trans_phi,marker='+',color="k",label=grb_name)
-    #ax2.set_xlim(trans_theta-45,trans_theta+45)
-    #ax2.set_ylim(trans_phi-45,trans_phi+45)
-    
+    ax2 = fig.add_subplot(224) 
     map = Basemap(projection="ortho",llcrnrx=-2.5*search_radius*10**5,llcrnry=-2.5*search_radius*10**5,urcrnrx=2.5*search_radius*10**5,urcrnry=2.5*search_radius*10**5, lat_0=90-trans_theta,lon_0=trans_phi)
     map_Xi, map_Yi = map(Xi,Yi)
     map.contour(map_Xi,map_Yi,Z2,[74.397*sca_2,88.379*sca_2],colors=["C0","C1"],linewidths=0.75)
     x_trans, y_trans = map(trans_phi, 90-trans_theta)
     grb = map.plot(x_trans,y_trans,"k+")
-    map.drawmeridians(np.arange(0,360,30), lables=np.arange(0,360,30)) 
-    map.drawparallels(np.arange(-90,90,30), lables=np.arange(180,0,-30))
+    percent_90_area_sca = get_contour_area(X,Y,Z2,74.397*sca_2)
+    percent_99_area_sca = get_contour_area(X,Y,Z2,88.379*sca_2)
+    map.drawmeridians(np.arange(0,360,30), labels=[0,0,0,1],labelstyle="+/-") 
+    map.drawparallels(np.arange(-90,90,30), labels=[1,0,0,0],labelstyle="+/-")
 
     line1= pl.Line2D(range(10), range(10), marker='None', linestyle='-',linewidth=0.75, color="C0")
     line2= pl.Line2D(range(10), range(10), marker='None', linestyle='-',linewidth=0.75, color="C1")
-    ax2.legend(("k+",line1,line2),(grb_name,"90 %","99 %"),numpoints=1,loc="upper right",prop={'size':6})
-    ax2.text(x_trans,y_trans,r"{a:0.2f} deg$^{{2}}$".format(a=cont_area))
+    ax2.legend(("k+",line1,line2),(grb_name,"90 % area={a:0.2f}".format(a=percent_90_area_sca),"99 % area={a:0.2f}".format(a=percent_99_area_sca)),numpoints=1,loc="upper right",prop={'size':6})
     
     fig.set_size_inches([8,8])
     pdf_file.savefig(fig)
@@ -1309,7 +1298,7 @@ if __name__ == "__main__":
     loc_txt_file = path_to_plotfile+"/"+grb_name+"_loc_table.txt"
     joint_tab_file = path_to_plotfile+"/"+grb_name+"_joint_table.txt"
 
-    fluence = 1.15e-5
+    fluence = 4.15e-5
     emin = 10
     emax = 1000
     print "======================================================================================"
