@@ -957,6 +957,7 @@ def plot_lc(grb_name,clean_file,theta,phi,grb_tstart,grb_tend,pre_tstart,pre_ten
     plt.axvspan(post_tstart,post_tend,color='orange',alpha=0.2,label='Background')
     plt.legend(prop={'size':6})
     plt.xlim(pre_tstart-100,post_tend+100)
+    fig.set_size_inches([6.5,3.0*6.5/4.0])
     pdf_file.savefig(fig)
 
     return 0
@@ -990,7 +991,7 @@ def plot_grid(pdf_file,grb_name,trans_theta,trans_phi,sel_theta_arr,sel_phi_arr,
     grid_map.drawmeridians(np.arange(0,360,30), lables=np.arange(0,360,30))
     plt.title("The simulation grid for "+grb_name+ " (r = {r:0.1f})".format(r=search_radius))
     
-    fig.set_size_inches([6,6])
+    fig.set_size_inches([6.5,6.5])
     pdf_file.savefig(fig)
     
     return 0
@@ -1231,7 +1232,7 @@ def plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,sel_theta_arr,sel_p
     line2= pl.Line2D(range(10), range(10), marker='None', linestyle='-',linewidth=0.75, color="C1")
     ax2.legend(("k+",line1,line2),(grb_name,"90 % area={a:0.2f}".format(a=percent_90_area_sca),"99 % area={a:0.2f}".format(a=percent_99_area_sca)),numpoints=1,loc="upper right",prop={'size':6})
     
-    fig.set_size_inches([8,8])
+    fig.set_size_inches([6.5,6.5])
     pdf_file.savefig(fig)
 
     return 0
