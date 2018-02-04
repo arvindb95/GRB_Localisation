@@ -391,7 +391,7 @@ def powerlaw(E, alpha=-1.0,E_peak=250.0*u.keV,norm=1.0):
     Returns:
     Total number of PHOTONS/s/cm^2/keV
     """
-    return norm*E**alpha*np.exp(-E/E_peak)
+    return norm*E**alpha #*np.exp(-E/E_peak) ONLY FOR NOVA. REMEMBER TO CHANGE####################################
 
 def model(E, alpha=-1.0, beta=-2.5, E_peak=250.0*u.keV, norm=1.0,typ="band"):
     """
@@ -979,7 +979,10 @@ def plot_grid(pdf_file,grb_name,trans_theta,trans_phi,sel_theta_arr,sel_phi_arr,
     saves figure containing the grid to the pdf_file
     """
     fig = plt.figure()
-    grid_map = Basemap(projection="ortho",llcrnrx=-2.5*search_radius*10**5,llcrnry=-2.5*search_radius*10**5,urcrnrx=2.5*search_radius*10**5,urcrnry=2.5*search_radius*10**5, lat_0=90-trans_theta,lon_0=trans_phi)
+    
+    ax_sca = search_radius/20.0
+
+    grid_map = Basemap(projection="ortho",llcrnrx=-ax_sca*search_radius*10**5,llcrnry=-ax_sca*search_radius*10**5,urcrnrx=ax_sca*search_radius*10**5,urcrnry=ax_sca*search_radius*10**5, lat_0=90-trans_theta,lon_0=trans_phi)
     
     x_trans, y_trans = grid_map(trans_phi, 90-trans_theta)
     grid_map.plot(x_trans,y_trans,"k+")
@@ -987,8 +990,8 @@ def plot_grid(pdf_file,grb_name,trans_theta,trans_phi,sel_theta_arr,sel_phi_arr,
 
     x_neigh, y_neigh = grid_map(sel_phi_arr, 90 - sel_theta_arr)
     grid_map.plot(x_neigh, y_neigh, "C0o")
-    grid_map.drawparallels(np.arange(-90,90,30), lables=np.arange(180,0,-30))
-    grid_map.drawmeridians(np.arange(0,360,30), lables=np.arange(0,360,30))
+    grid_map.drawparallels(np.arange(-90,90,30), labels=[1,1,0,0],labelstyle="+/-")
+    grid_map.drawmeridians(np.arange(0,360,30), labels=[0,0,1,1],labelstyle="+/-")
     plt.title("The simulation grid for "+grb_name+ " (r = {r:0.1f})".format(r=search_radius))
     
     fig.set_size_inches([6.5,6.5])
@@ -1007,6 +1010,7 @@ def plot_binned_dph(fig,ax,ax_title,image,pixbin):
     image = the image to be plotted 
     pixbin = the resampling bin size 
     """
+ 
     im = ax.imshow(resample(image,pixbin),interpolation='none')
     ax.set_title(ax_title,fontsize=8)
     ax.set_xlim(-1,128/pixbin - 0.5)
@@ -1149,6 +1153,7 @@ def plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,sel_theta_arr,sel_p
     Saves the plot into the pdf_file
     """
     fig = plt.figure()
+    #plt.style.use("dark_background")
 
     plt.suptitle(r"$\chi^2$ plots for "+grb_name+"; Left: Without scaling, Right: With scaling")
 
@@ -1168,8 +1173,10 @@ def plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,sel_theta_arr,sel_p
     print np.nanmin(Z2)
     print "#########################################################################"
     
+    ax_sca = search_radius/15.0 # Variable to define the region to be plotted
+            
     ax3 = fig.add_subplot(221)
-    map = Basemap(projection="ortho",llcrnrx=-2.5*search_radius*10**5,llcrnry=-2.5*search_radius*10**5,urcrnrx=2.5*search_radius*10**5,urcrnry=2.5*search_radius*10**5, lat_0=90-trans_theta,lon_0=trans_phi)
+    map = Basemap(projection="ortho",llcrnrx=-ax_sca*search_radius*10**5,llcrnry=-ax_sca*search_radius*10**5,urcrnrx=ax_sca*search_radius*10**5,urcrnry=ax_sca*search_radius*10**5, lat_0=90-trans_theta,lon_0=trans_phi)
     map_Xi, map_Yi = map(Xi,Yi)
     map.contour(map_Xi,map_Yi,Z1,[np.nanmin(Z1)+1*sca_1,np.nanmin(Z1)+2*sca_1,np.nanmin(Z1)+3*sca_1],colors=["C0","C1","C2"],linewidths=0.75)
     x_trans, y_trans = map(trans_phi, 90-trans_theta)
@@ -1177,7 +1184,7 @@ def plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,sel_theta_arr,sel_p
     sigma_1_area = get_contour_area(X,Y,Z1,np.nanmin(Z1)+1*sca_1)
     sigma_2_area = get_contour_area(X,Y,Z1,np.nanmin(Z1)+2*sca_1)
     sigma_3_area = get_contour_area(X,Y,Z1,np.nanmin(Z1)+3*sca_1)
-    map.drawmeridians(np.arange(0,360,30), labels=[0,0,0,1],labelstyle="+/-") 
+    map.drawmeridians(np.arange(0,360,30), labels=[0,0,1,0],labelstyle="+/-") 
     map.drawparallels(np.arange(-90,90,30), labels=[1,0,0,0],labelstyle="+/-")
 
     line1= pl.Line2D(range(10), range(10), marker='None', linestyle='-',linewidth=0.75, color="C0")
@@ -1186,7 +1193,7 @@ def plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,sel_theta_arr,sel_p
     ax3.legend(("k+",line1,line2,line3),(grb_name,r"1-$\sigma$ area={a:0.2f}".format(a=sigma_1_area),r"2-$\sigma$ area={a:0.2f}".format(a=sigma_2_area),r"3-$\sigma$ area={a:0.2f}".format(a=sigma_3_area)),numpoints=1,loc='upper right',prop={'size':6})
 
     ax4 = fig.add_subplot(222)
-    map = Basemap(projection="ortho",llcrnrx=-2.5*search_radius*10**5,llcrnry=-2.5*search_radius*10**5,urcrnrx=2.5*search_radius*10**5,urcrnry=2.5*search_radius*10**5, lat_0=90-trans_theta,lon_0=trans_phi)
+    map = Basemap(projection="ortho",llcrnrx=-ax_sca*search_radius*10**5,llcrnry=-ax_sca*search_radius*10**5,urcrnrx=ax_sca*search_radius*10**5,urcrnry=ax_sca*search_radius*10**5, lat_0=90-trans_theta,lon_0=trans_phi)
     map_Xi, map_Yi = map(Xi,Yi)
     map.contour(map_Xi,map_Yi,Z2,[np.nanmin(Z2)+1*sca_2,np.nanmin(Z2)+2*sca_2,np.nanmin(Z2)+3*sca_2],colors=["C0","C1","C2"],linewidths=0.75)
     x_trans, y_trans = map(trans_phi, 90-trans_theta)
@@ -1194,8 +1201,8 @@ def plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,sel_theta_arr,sel_p
     sigma_1_area_sca = get_contour_area(X,Y,Z2,np.nanmin(Z2)+1*sca_2)
     sigma_2_area_sca = get_contour_area(X,Y,Z2,np.nanmin(Z2)+2*sca_2)
     sigma_3_area_sca = get_contour_area(X,Y,Z2,np.nanmin(Z2)+3*sca_2)
-    map.drawmeridians(np.arange(0,360,30), labels=[0,0,0,1],labelstyle="+/-") 
-    map.drawparallels(np.arange(-90,90,30), labels=[1,0,0,0],labelstyle="+/-")
+    map.drawmeridians(np.arange(0,360,30), labels=[0,0,1,],labelstyle="+/-") 
+    map.drawparallels(np.arange(-90,90,30), labels=[0,1,0,0],labelstyle="+/-")
 
     line1= pl.Line2D(range(10), range(10), marker='None', linestyle='-',linewidth=0.75, color="C0")
     line2= pl.Line2D(range(10), range(10), marker='None', linestyle='-',linewidth=0.75, color="C1")
@@ -1203,7 +1210,7 @@ def plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,sel_theta_arr,sel_p
     ax4.legend(("k+",line1,line2,line3),(grb_name,r"1-$\sigma$ area={a:0.2f}".format(a=sigma_1_area_sca),r"2-$\sigma$ area={a:0.2f}".format(a=sigma_2_area_sca),r"3-$\sigma$ area={a:0.2f}".format(a=sigma_3_area_sca)),numpoints=1,loc='upper right',prop={'size':6})
     
     ax1 = fig.add_subplot(223)
-    map = Basemap(projection="ortho",llcrnrx=-2.5*search_radius*10**5,llcrnry=-2.5*search_radius*10**5,urcrnrx=2.5*search_radius*10**5,urcrnry=2.5*search_radius*10**5, lat_0=90-trans_theta,lon_0=trans_phi)
+    map = Basemap(projection="ortho",llcrnrx=-ax_sca*search_radius*10**5,llcrnry=-ax_sca*search_radius*10**5,urcrnrx=ax_sca*search_radius*10**5,urcrnry=ax_sca*search_radius*10**5, lat_0=90-trans_theta,lon_0=trans_phi)
     map_Xi, map_Yi = map(Xi,Yi)
     map.contour(map_Xi,map_Yi,Z1,[76.630*sca_1,90.802*sca_1],colors=["C0","C1"],linewidths=0.75)
     x_trans, y_trans = map(trans_phi, 90-trans_theta)
@@ -1218,19 +1225,31 @@ def plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,sel_theta_arr,sel_p
     ax1.legend(("k+",line1,line2),(grb_name,"90 % area={a:0.2f}".format(a=percent_90_area),"99 % area={a:0.2f}".format(a=percent_99_area)),numpoints=1,loc='upper right',prop={'size':6})
 
     ax2 = fig.add_subplot(224) 
-    map = Basemap(projection="ortho",llcrnrx=-2.5*search_radius*10**5,llcrnry=-2.5*search_radius*10**5,urcrnrx=2.5*search_radius*10**5,urcrnry=2.5*search_radius*10**5, lat_0=90-trans_theta,lon_0=trans_phi)
+    map = Basemap(projection="ortho",llcrnrx=-ax_sca*search_radius*10**5,llcrnry=-ax_sca*search_radius*10**5,urcrnrx=ax_sca*search_radius*10**5,urcrnry=ax_sca*search_radius*10**5, lat_0=90-trans_theta,lon_0=trans_phi)
     map_Xi, map_Yi = map(Xi,Yi)
     map.contour(map_Xi,map_Yi,Z2,[74.397*sca_2,88.379*sca_2],colors=["C0","C1"],linewidths=0.75)
     x_trans, y_trans = map(trans_phi, 90-trans_theta)
     grb = map.plot(x_trans,y_trans,"k+")
     percent_90_area_sca = get_contour_area(X,Y,Z2,74.397*sca_2)
     percent_99_area_sca = get_contour_area(X,Y,Z2,88.379*sca_2)
-    map.drawmeridians(np.arange(0,360,30), labels=[0,0,0,1],labelstyle="+/-") 
-    map.drawparallels(np.arange(-90,90,30), labels=[1,0,0,0],labelstyle="+/-")
+    def setcolor(x, color):
+        for m in x:
+            for t in x[m][1]:
+                t.set_color(color)
+    mer = map.drawmeridians(np.arange(0,360,30), labels=[0,0,1,1],labelstyle="+/-") 
+    par = map.drawparallels(np.arange(-90,90,30), labels=[1,1,0,0],labelstyle="+/-")
+    #setcolor(mer,"w")
+    #setcolor(par,"w")
 
     line1= pl.Line2D(range(10), range(10), marker='None', linestyle='-',linewidth=0.75, color="C0")
     line2= pl.Line2D(range(10), range(10), marker='None', linestyle='-',linewidth=0.75, color="C1")
-    ax2.legend(("k+",line1,line2),(grb_name,"90 % area={a:0.2f}".format(a=percent_90_area_sca),"99 % area={a:0.2f}".format(a=percent_99_area_sca)),numpoints=1,loc="upper right",prop={'size':6})
+    
+    import matplotlib.patches as mpatches  
+
+    #yellow_patch = mpatches.Patch(color="yellow")
+    #orange_patch = mpatches.Patch(color="darkgoldenrod")
+
+    ax2.legend(("k+",line1,line2),(grb_name,r"90 % area={a:0.2f} deg$^{{2}}$".format(a=percent_90_area_sca),r"99 % area={a:0.2f} deg$^{{2}}$".format(a=percent_99_area_sca)),numpoints=1,loc="lower right",prop={'size':6})
     
     fig.set_size_inches([6.5,6.5])
     pdf_file.savefig(fig)
@@ -1299,7 +1318,7 @@ if __name__ == "__main__":
     loc_txt_file = path_to_plotfile+"/"+grb_name+"_loc_table.txt"
     joint_tab_file = path_to_plotfile+"/"+grb_name+"_joint_table.txt"
 
-    fluence = 4.15e-5
+    fluence = 2.4e-7
     emin = 10
     emax = 1000
     print "======================================================================================"
@@ -1325,7 +1344,10 @@ if __name__ == "__main__":
     print "The coordinates of the pixel are : THETA = ",pix_theta,", PHI = ",pix_phi
     
     sel_theta_arr, sel_phi_arr = get_neighbours(pix_theta,pix_phi,theta_arr,phi_arr,sep_angle=args.radius)
-
+    
+    sel_theta_arr = np.array([121.13])
+    sel_phi_arr = np.array([189.50])
+ 
     print "The theta's of the selected pixels : ",sel_theta_arr
     print "The phi's of the selected pixels : ",sel_phi_arr
 
@@ -1336,52 +1358,72 @@ if __name__ == "__main__":
     # Plotting the grid points around the known position of the transient
 
     plot_grid(pdf_file,grb_name,trans_theta,trans_phi,sel_theta_arr,sel_phi_arr,args.radius)
-
+    
     # Now we have all the points. So, we can move on to calculating the dphs for all these points
     print "========================================================================================"
 
+
     # Calling the function to get the data_dph 
-    if (args.do_inject_grb==False):
-        flat_grb_dph,flat_bkgd_dph,grb_dph,bkgd_dph,t_src,t_tot = data_bkgd_image(grbdir,infile,pre_tstart,pre_tend,grb_tstart,grb_tend,post_tstart,post_tend)
-        src_dph = grb_dph - bkgd_dph*t_src/t_tot
-    else :
-        t_src = 1.0
-        print "############################# Injecting GRB at theta={t:0.2f}, phi={p:0.2f} ##########################".format(t=trans_theta,p=trans_phi)
-        src_dph, bkgd_dph, grb_dph, A = inject_grb(trans_theta,trans_phi,infile,grbdir,grid_dir,pre_tstart,pre_tend,post_tstart,post_tend,t_src,typ,alpha,beta,E0,fluence,emin,emax)
-    
-    sim_flat,sim_dph,badpix_mask,sim_err_dph = simulated_dph(grbdir,grid_dir,pix_theta,pix_phi,typ,t_src,alpha,beta,E0,A)
-    
-    # Plotting the badpix corrected dphs 
-    
-    plot_sim_data_dphs(pdf_file,grb_name,trans_theta,trans_phi,pix_theta,pix_phi,sim_dph,grb_dph,bkgd_dph,badpix_mask,t_src,t_tot,pixbin)
-    
-    print "========================================================================================"
+#    if (args.do_inject_grb==False):
+#        flat_grb_dph,flat_bkgd_dph,grb_dph,bkgd_dph,t_src,t_tot = data_bkgd_image(grbdir,infile,pre_tstart,pre_tend,grb_tstart,grb_tend,post_tstart,post_tend)
+#        src_dph = grb_dph - bkgd_dph*t_src/t_tot
+#    else :
+#        t_src = 1.0
+#        print "############################# Injecting GRB at theta={t:0.2f}, phi={p:0.2f} ##########################".format(t=trans_theta,p=trans_phi)
+#        src_dph, bkgd_dph, grb_dph, A = inject_grb(trans_theta,trans_phi,infile,grbdir,grid_dir,pre_tstart,pre_tend,post_tstart,post_tend,t_src,typ,alpha,beta,E0,fluence,emin,emax)
+#    
+#    sim_flat,sim_dph,badpix_mask,sim_err_dph = simulated_dph(grbdir,grid_dir,pix_theta,pix_phi,typ,t_src,alpha,beta,E0,A)
+#    
+#    # Plotting the badpix corrected dphs 
+#    
+#    plot_sim_data_dphs(pdf_file,grb_name,trans_theta,trans_phi,pix_theta,pix_phi,sim_dph,grb_dph,bkgd_dph,badpix_mask,t_src,t_tot,pixbin)
+#    
+#    print "========================================================================================"
+#
+#    # Joint fit 
+#    if (args.do_joint_fit==True):
+#
+#    	make_joint_table(joint_tab_file,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,alpha,beta,E0,A)
+#
+#    # Calculating chi_sq before and after scaling
+#    
+##    chi_sq_wo_sca_arr, chi_sq_sca_arr = calc_chi_sq(loc_txt_file,pdf_file,grb_name,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,args.do_joint_fit,joint_tab_file,alpha,beta,E0,A)
+#    
+#
+#    print "========================================================================================"
 
-    # Joint fit 
-    if (args.do_joint_fit==True):
 
-    	make_joint_table(joint_tab_file,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,alpha,beta,E0,A)
-
-    # Calculating chi_sq before and after scaling
-    
-    chi_sq_wo_sca_arr, chi_sq_sca_arr = calc_chi_sq(loc_txt_file,pdf_file,grb_name,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,args.do_joint_fit,joint_tab_file,alpha,beta,E0,A)
-    
-
-    print "========================================================================================"
-
-
-    # Plotting the contour plots (The data is read out from the files)
-    
-    tab = Table.read(loc_txt_file,format='ascii')
-
-    chi_sq_wo_sca_arr = tab['chi_sq_wo_sca'].data
-    chi_sq_sca_arr = tab['chi_sq_sca'].data
-    scaling_arr = tab['scaling'].data
-    intercept_arr = tab['intercept'].data
-
-    plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,sel_theta_arr,sel_phi_arr,chi_sq_wo_sca_arr,chi_sq_sca_arr,args.radius)
-
-    t1 = time.time()
-
-    t_final = t1-t0
-    print "Time taken for the code to run (s) : ",t_final    
+#    # Plotting the contour plots (The data is read out from the files)
+#    
+#    tab = Table.read(loc_txt_file,format='ascii')
+#
+#    chi_sq_wo_sca_arr = tab['chi_sq_wo_sca'].data
+#    chi_sq_sca_arr = tab['chi_sq_sca'].data
+#    scaling_arr = tab['scaling'].data
+#    intercept_arr = tab['intercept'].data
+#
+#    plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,sel_theta_arr,sel_phi_arr,chi_sq_wo_sca_arr,chi_sq_sca_arr,args.radius)
+#    
+#
+    sim_flat,sim_dph,badpix_mask,sim_err_dph = simulated_dph(grbdir,grid_dir,sel_theta_arr[0],sel_phi_arr[0],typ,t_src,alpha,beta,E0,A)
+    print "Theta phi for this other point ({t:0.2f}, {p:0.2f})".format(t=sel_theta_arr[0],p=sel_phi_arr[0])
+    pixbin = 16
+    final_dph_binned = resample(sim_dph*badpix_mask,pixbin)
+    fig = plt.figure()
+    plt.style.use("dark_background")
+    ax = fig.add_subplot(111)
+    im = ax.imshow(final_dph_binned,interpolation='none',vmin=0)
+    ax.axvline(x=-0.75,ymin=0,ymax=64,linewidth=5,color='w')
+    ax.set_yticklabels([])
+    ax.spines['left'].set_position(('data',-0.5))
+    ax.set_xlim(-1,128/pixbin -0.5)
+    ax.xaxis.set_ticks(np.arange(0,(128/pixbin),16/pixbin))
+    ax.set_xticklabels(np.arange(0,128,16))
+    ax.text(-1.5,2,'Radiator Plate',rotation=90)
+    fig.colorbar(im,ax=ax,fraction=0.046, pad=0.04)
+    plt.savefig("T91_P268_test.eps",bbox_inches='tight')
+#
+#    t1 = time.time()
+#
+#    t_final = t1-t0
+#    print "Time taken for the code to run (s) : ",t_final    
