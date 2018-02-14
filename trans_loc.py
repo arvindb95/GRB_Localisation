@@ -962,7 +962,78 @@ def plot_lc(grb_name,clean_file,theta,phi,grb_tstart,grb_tend,pre_tstart,pre_ten
 
     return 0
 
-def plot_grid(pdf_file,grb_name,trans_theta,trans_phi,sel_theta_arr,sel_phi_arr,search_radius):
+##################### For plotting dphs on the grid ############################# 
+
+from matplotlib.offsetbox import OffsetImage, AnnotationBbox
+from matplotlib.cbook import get_sample_data
+
+def imscatter(x, y, image, ax=None, zoom=1):
+    """
+    Returns an artist object to plot DPHs on a grid for better view
+    
+    Inputs:
+    x = x-coordinates of the point
+    y = y-coordinates of the point
+    image = the image to be plotted
+    ax = ax object for each of the images
+    zoom = scaling factor for the DPH
+
+    """
+    if ax is None:
+        ax = plt.gca()
+    try:
+        image = plt.imread(image)
+    except TypeError:
+        # Likely already an array...
+        pass
+    im = OffsetImage(image, zoom=zoom)
+    x, y = np.atleast_1d(x, y)
+    artists = []
+    for x0, y0 in zip(x, y):
+        ab = AnnotationBbox(im, (x0, y0), xycoords='data', frameon=False)
+        artists.append(ax.add_artist(ab))
+    ax.update_datalim(np.column_stack([x, y]))
+    ax.autoscale()
+    return artists
+
+def plot_sim_dph_png(grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,alpha,beta,E0,A):
+    """
+    Makes png plots for all the selected points round the point of interest
+
+    Input:
+    grbdir = directory of the grb
+    grid_dir = directory containing the mass model products
+    sel_theta_arr = selected array of thetas
+    sel_phi_arr = selected array of phis
+    typ,t_src,alpha,beta,E0,A = spectral parameters
+
+    Returns:
+
+    DPH saved in a png file of the form Tddd.dd_Pddd.dd.png 
+    """
+    
+    for i in range(len(sel_theta_arr)):
+        sim_flat,sim_dph,badpix_mask,sim_err_dph = simulated_dph(grbdir,grid_dir,sel_theta_arr[i],sel_phi_arr[i],typ,t_src,alpha,beta,E0,A)
+        pixbin = 16
+        final_dph_binned = resample(sim_dph*badpix_mask,pixbin)
+        fig = plt.figure()
+        plt.style.use("dark_background")
+        ax = fig.add_subplot(111)
+        im = ax.imshow(final_dph_binned,interpolation='none',vmin=0)
+        #ax.axvline(x=-0.75,ymin=0,ymax=64,linewidth=5,color='w')
+        ax.set_yticklabels([])
+        #ax.spines['left'].set_position(('data',-0.5))
+        ax.set_xlim(-0.5,128/pixbin -0.5)
+        ax.xaxis.set_ticks(np.arange(0,(128/pixbin),16/pixbin))
+        ax.set_xticklabels(np.arange(0,128,16))
+        #ax.text(-1.5,2,'Radiator Plate',rotation=90)
+        fig.colorbar(im,ax=ax,fraction=0.046, pad=0.04)
+        plt.savefig("plots/T{t:06.2f}_P{p:06.2f}.png".format(t=sel_theta_arr[i],p=sel_phi_arr[i],bbox_inches='tight'))
+
+    return 0
+
+
+def plot_grid_dph(pdf_file,grb_name,trans_theta,trans_phi,sel_theta_arr,sel_phi_arr,search_radius):
     """
     Plots the grid for which the chi-sq analysis will be done along with the known value of theta phi
     
@@ -980,10 +1051,52 @@ def plot_grid(pdf_file,grb_name,trans_theta,trans_phi,sel_theta_arr,sel_phi_arr,
     """
     fig = plt.figure()
     
-    ax_sca = search_radius/20.0
+    ax_sca = search_radius/4.0
 
     grid_map = Basemap(projection="ortho",llcrnrx=-ax_sca*search_radius*10**5,llcrnry=-ax_sca*search_radius*10**5,urcrnrx=ax_sca*search_radius*10**5,urcrnry=ax_sca*search_radius*10**5, lat_0=90-trans_theta,lon_0=trans_phi)
     
+    x_trans, y_trans = grid_map(trans_phi, 90-trans_theta)
+    grid_map.plot(x_trans,y_trans,"k+")
+    plt.text(x_trans,y_trans,grb_name)
+    ax1 = fig.add_subplot(111)
+    for i in range(len(sel_theta_arr)): 
+        this_x, this_y = grid_map(sel_phi_arr[i], 90 - sel_theta_arr[i])
+        imscatter(this_x, this_y, get_sample_data("/home/arvind/Arvind/transient_localisation/GRB_Localisation/plots/T{t:06.2f}_P{p:06.2f}.png".format(t=sel_theta_arr[i],p=sel_phi_arr[i])),ax=ax1,zoom=0.1)
+
+    x_neigh, y_neigh = grid_map(sel_phi_arr, 90 - sel_theta_arr)
+    grid_map.plot(x_neigh, y_neigh, "C0o")
+                
+    grid_map.drawparallels(np.arange(-90,90,30), labels=[1,1,0,0],labelstyle="+/-")
+    grid_map.drawmeridians(np.arange(0,360,30), labels=[0,0,1,1],labelstyle="+/-")
+    plt.title("The simulation grid for "+grb_name+ " (r = {r:0.1f})".format(r=search_radius), y=1.05)
+    
+    fig.set_size_inches([6.5,6.5])
+    pdf_file.savefig(fig)
+    
+    return 0
+
+def plot_grid(pdf_file,grb_name,trans_theta,trans_phi,sel_theta_arr,sel_phi_arr,search_radius):
+    """
+    Plots the grid for which the chi-sq analysis will be done along with the known value of theta phi
+    
+    Inputs:
+    pdf_file = file in which the output is to be written
+    grb_name = name of the grb 
+    trans_theta = theta of transient (deg)
+    trans_phi = phi of transient (deg)
+    sel_theta_arr = array of theta's of pixels around the given direction (deg)
+    sel_phi_arr = array of phi's of pixels around the given direction (deg)
+    search_radius = radius (deg) around the central pixel to do the analysis
+
+    Returns:
+    saves figure containing the grid to the pdf_file
+    """
+    fig = plt.figure()
+
+    ax_sca = search_radius/5.0
+
+    grid_map = Basemap(projection="ortho",llcrnrx=-ax_sca*search_radius*10**5,llcrnry=-ax_sca*search_radius*10**5,urcrnrx=ax_sca*search_radius*10**5,urcrnry=ax_sca*search_radius*10**5, lat_0=90-trans_theta,lon_0=trans_phi)
+
     x_trans, y_trans = grid_map(trans_phi, 90-trans_theta)
     grid_map.plot(x_trans,y_trans,"k+")
     plt.text(x_trans,y_trans,grb_name)
@@ -992,12 +1105,15 @@ def plot_grid(pdf_file,grb_name,trans_theta,trans_phi,sel_theta_arr,sel_phi_arr,
     grid_map.plot(x_neigh, y_neigh, "C0o")
     grid_map.drawparallels(np.arange(-90,90,30), labels=[1,1,0,0],labelstyle="+/-")
     grid_map.drawmeridians(np.arange(0,360,30), labels=[0,0,1,1],labelstyle="+/-")
-    plt.title("The simulation grid for "+grb_name+ " (r = {r:0.1f})".format(r=search_radius))
-    
+    plt.title("The simulation grid for "+grb_name+ " (r = {r:0.1f})".format(r=search_radius),y = 1.05)
+
     fig.set_size_inches([6.5,6.5])
     pdf_file.savefig(fig)
-    
+
     return 0
+
+
+####################################################################################################
 
 def plot_binned_dph(fig,ax,ax_title,image,pixbin):
     """
@@ -1071,42 +1187,6 @@ def plot_sim_data_dphs(pdf_file,grb_name,trans_theta,trans_phi,pix_theta,pix_phi
 
     f.set_size_inches([6.5,6.5])
     pdf_file.savefig(f)  # saves the current figure into a pdf_file page
-    return 0
-
-def plot_all_sim_dphs(pdf_file,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,alpha=-1.0,beta=-2.5,E0=250,A=1):
-    """
-    Plots all the simulation dphs at all the points of the grid, which is the output of the plot_grid function
-
-    Inputs:
-    pdf_file = file to which the output has to be written
-    grbdir = directory containing the data for the GRB
-    grid_dir = directory in which the grid outputs are stored
-    sel_theta_arr = array of theta's of the grid points around the GRB location (deg)
-    sel_phi_arr = array of phi's of the grid points around the GRB location (deg)
-    typ = function type to use for the spectrum "band" or "powerlaw", default = "band"
-    t_src = t_90 of the source (s)
-    alpha = first power law index of the band function, default = -1.0
-    beta = second powerlaw index of the band function, default = -2.5
-    E0 = characteristic energy in keV, default = 250  (keV)
-    A = normalisation constant for the band function, default = 1
-    
-    Returns:
-    Saves the figure with all the dph's in the pdf_file 
-    """
-    no_dphs = len(sel_theta_arr)
-    fig = plt.figure()
-    for loc in range(no_dphs):
-        loc_sim_flat,loc_sim_dph,badpix_mask,loc_sim_err_dph = simulated_dph(grbdir,grid_dir,sel_theta_arr[loc],sel_phi_arr[loc],typ,t_src,alpha,beta,E0,A)
-
-        ax = fig.add_subplot(np.ceil(no_dphs/3.0),3,loc+1)
-
-        plot_binned_dph(fig,ax,"",loc_sim_dph*badpix_mask,pixbin)
-        ax.set_xticklabels([])
-        ax.set_ylabel(r"$\theta$ = {th:0.1f}, $\phi$ = {ph:0.1f}".format(th=sel_theta_arr[loc],ph=sel_phi_arr[loc]),fontsize=5,rotation=90)
-    
-    fig.set_size_inches([6.5,6.5])
-    pdf_file.savefig(fig)
-    
     return 0
 
 def get_contour_area(X,Y,Z,Level):
@@ -1309,9 +1389,9 @@ if __name__ == "__main__":
     grbdir = path_to_data
     
     path_to_plotfile = plotfile.split("/")[0]
-    print path_to_plotfile
+    
 
-    grid_dir = "/mnt/nas_czti/massmodelgrid"
+    grid_dir = "/media/arvind/Elements/5th_Year_Project/massmodelgrid"
     depth = 4 # For now hard coded this. Let's see if we can make this better later
     
     pdf_file = PdfPages(plotfile)
@@ -1345,8 +1425,7 @@ if __name__ == "__main__":
     
     sel_theta_arr, sel_phi_arr = get_neighbours(pix_theta,pix_phi,theta_arr,phi_arr,sep_angle=args.radius)
     
-    sel_theta_arr = np.array([121.13])
-    sel_phi_arr = np.array([189.50])
+    grid_sel_theta_arr, grid_sel_phi_arr = get_neighbours(pix_theta,pix_phi,theta_arr,phi_arr,sep_angle=5.0)
  
     print "The theta's of the selected pixels : ",sel_theta_arr
     print "The phi's of the selected pixels : ",sel_phi_arr
@@ -1354,10 +1433,17 @@ if __name__ == "__main__":
     # Plotting the lightcurves for all quadrants 
 
     plot_lc(grb_name,infile,trans_theta,trans_phi,grb_tstart,grb_tend,pre_tstart,pre_tend,post_tstart,post_tend,pdf_file)
-    
+
+    ##################### Plotting all sim dphs at the selected points ###############################
+
+    #plot_sim_dph_png(grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,alpha,beta,E0,A)
+
+    ##################################################################################################
+
     # Plotting the grid points around the known position of the transient
 
-    plot_grid(pdf_file,grb_name,trans_theta,trans_phi,sel_theta_arr,sel_phi_arr,args.radius)
+    plot_grid_dph(pdf_file,grb_name,pix_theta,pix_phi,grid_sel_theta_arr,grid_sel_phi_arr,5.0)
+    plot_grid(pdf_file,grb_name,pix_theta,pix_phi,sel_theta_arr,sel_phi_arr,args.radius)
     
     # Now we have all the points. So, we can move on to calculating the dphs for all these points
     print "========================================================================================"
@@ -1404,26 +1490,7 @@ if __name__ == "__main__":
 #
 #    plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,sel_theta_arr,sel_phi_arr,chi_sq_wo_sca_arr,chi_sq_sca_arr,args.radius)
 #    
-#
-    sim_flat,sim_dph,badpix_mask,sim_err_dph = simulated_dph(grbdir,grid_dir,sel_theta_arr[0],sel_phi_arr[0],typ,t_src,alpha,beta,E0,A)
-    print "Theta phi for this other point ({t:0.2f}, {p:0.2f})".format(t=sel_theta_arr[0],p=sel_phi_arr[0])
-    pixbin = 16
-    final_dph_binned = resample(sim_dph*badpix_mask,pixbin)
-    fig = plt.figure()
-    plt.style.use("dark_background")
-    ax = fig.add_subplot(111)
-    im = ax.imshow(final_dph_binned,interpolation='none',vmin=0)
-    ax.axvline(x=-0.75,ymin=0,ymax=64,linewidth=5,color='w')
-    ax.set_yticklabels([])
-    ax.spines['left'].set_position(('data',-0.5))
-    ax.set_xlim(-1,128/pixbin -0.5)
-    ax.xaxis.set_ticks(np.arange(0,(128/pixbin),16/pixbin))
-    ax.set_xticklabels(np.arange(0,128,16))
-    ax.text(-1.5,2,'Radiator Plate',rotation=90)
-    fig.colorbar(im,ax=ax,fraction=0.046, pad=0.04)
-    plt.savefig("T91_P268_test.eps",bbox_inches='tight')
-#
 #    t1 = time.time()
 #
 #    t_final = t1-t0
-#    print "Time taken for the code to run (s) : ",t_final    
+#    print "Time taken for the code to run (s) : ",t_final
