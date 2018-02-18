@@ -29,6 +29,7 @@ from matplotlib import cm
 import pylab as pl
 from mpl_toolkits.basemap import Basemap
 import os
+import random
 
 import time
 
@@ -652,9 +653,9 @@ def gen_inj_conf(data_dir,inj_dir,inject_theta,inject_phi,fluence,emin,emax,alph
     default_config, required_config = get_default_configuration()
    
     default_config['name'] = "GRBinjected_T{t:06.2f}_P{p:06.2f}".format(t=inject_theta,p=inject_phi)
-    required_config['l2file'] = data_dir+"/*_level2_bc.evt"
-    required_config['infile'] = data_dir+"/*_quad_clean.evt"
-    required_config['mkffile'] = data_dir+"/*_level2.mkf"
+    required_config['l2file'] = data_dir+"/AS1G06_036T01_9000000988_07224cztM0_level2_bc.evt"
+    required_config['infile'] = data_dir+"/AS1G06_036T01_9000000988_07224cztM0_level2_quad_clean.evt"
+    required_config['mkffile'] = data_dir+"/AS1G06_036T01_9000000988_07224czt_level2.mkf"
     required_config['trigtime'] = 223271800
     required_config['transtart'] = 223271800
     required_config['tranend'] = 223271800
@@ -1393,182 +1394,182 @@ def plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,sel_theta_arr,sel_p
 
 if __name__ == "__main__":
        
-#    parser = argparse.ArgumentParser()
-#    parser.add_argument("configfile", nargs="?", help="Path to configfile", type=str)
-#    parser.add_argument("radius", help="Radius (deg) around the central pixel to do chi_sq analysis",type=int)
-#    parser.add_argument("--do_inject_grb", help="Boolean to decide if artificial GRB should be injected or not",type=bool)
-#    parser.add_argument("--do_joint_fit", help="Boolean to decide whether to do joint fit or not",type=bool)
-#    parser.add_argument('--noloc', dest='noloc', action='store_true')
-#    parser.set_defaults(do_inject_grb=False,do_joint_fit=False,noloc=False)
-#    args = parser.parse_args()
-#    runconf = get_configuration(args)
-#
-#    # Getting all the info from the configfile. Will also print config for this run.
-#
-#    grb_name = runconf['name']
-#    mkffile = runconf['mkffile']
-#    infile = runconf['infile']
-#    pre_tstart = runconf['bkg1start']
-#    pre_tend = runconf['bkg1end']
-#    trigtime = runconf['trigtime']
-#    grb_tstart = runconf['transtart']
-#    grb_tend = runconf['tranend']
-#    post_tstart = runconf['bkg2start']
-#    post_tend = runconf['bkg2end']
-#    t_src = grb_tend - grb_tstart
-#    t_tot = (pre_tend-pre_tstart)+(post_tend-post_tstart)
-#    ra_tran = runconf['ra']
-#    dec_tran = runconf['dec']
-#    lc_bin = runconf['lc_bin']
-#    alpha = runconf['alpha']
-#    beta = runconf['beta']
-#    E0 = runconf['E0']
-#    A = runconf['A']
-#    plotfile = runconf['plotfile']
-#    sim_scale = t_src
-#    pixbin = int(runconf['pixsize'])
-#    comp_bin = int(runconf['comp_bin'])
-#    typ = runconf['typ']
-#    imsize = 128/runconf['pixsize']
-#
-#    path_to_conf = infile.split("/") # Splitting to get the location of the data
-#
-#    path_to_data = ""
-#
-#    for i in range(1, len(path_to_conf)-1):
-#  	path_to_data += "/"+path_to_conf[i]
-#
-#    grbdir = path_to_data
-#
-#    print grbdir  
-#    
-#    path_to_plotfile = plotfile.split("/")[0]
-#    
-#    grid_dir = "/mnt/nas_czti/massmodelgrid"
-#    depth = 4 # For now hard coded this. Let's see if we can make this better later
-#    
-#    pdf_file = PdfPages(plotfile)
-#    loc_txt_file = path_to_plotfile+"/"+grb_name+"_loc_table.txt"
-#    joint_tab_file = path_to_plotfile+"/"+grb_name+"_joint_table.txt"
-#    area_txt_file = path_to_plotfile+"/"+grb_name+"_area_table.txt"
-#
-    fluence = 2.4e-5
+    parser = argparse.ArgumentParser()
+    parser.add_argument("configfile", nargs="?", help="Path to configfile", type=str)
+    parser.add_argument("radius", help="Radius (deg) around the central pixel to do chi_sq analysis",type=int)
+    parser.add_argument("--do_inject_grb", help="Boolean to decide if artificial GRB should be injected or not",type=bool)
+    parser.add_argument("--do_joint_fit", help="Boolean to decide whether to do joint fit or not",type=bool)
+    parser.add_argument('--noloc', dest='noloc', action='store_true')
+    parser.set_defaults(do_inject_grb=False,do_joint_fit=False,noloc=False)
+    args = parser.parse_args()
+    runconf = get_configuration(args)
+
+    # Getting all the info from the configfile. Will also print config for this run.
+
+    grb_name = runconf['name']
+    mkffile = runconf['mkffile']
+    infile = runconf['infile']
+    pre_tstart = runconf['bkg1start']
+    pre_tend = runconf['bkg1end']
+    trigtime = runconf['trigtime']
+    grb_tstart = runconf['transtart']
+    grb_tend = runconf['tranend']
+    post_tstart = runconf['bkg2start']
+    post_tend = runconf['bkg2end']
+    t_src = grb_tend - grb_tstart
+    t_tot = (pre_tend-pre_tstart)+(post_tend-post_tstart)
+    ra_tran = runconf['ra']
+    dec_tran = runconf['dec']
+    lc_bin = runconf['lc_bin']
+    alpha = runconf['alpha']
+    beta = runconf['beta']
+    E0 = runconf['E0']
+    A = runconf['A']
+    plotfile = runconf['plotfile']
+    sim_scale = t_src
+    pixbin = int(runconf['pixsize'])
+    comp_bin = int(runconf['comp_bin'])
+    typ = runconf['typ']
+    imsize = 128/runconf['pixsize']
+
+    path_to_conf = infile.split("/") # Splitting to get the location of the data
+
+    path_to_data = ""
+
+    for i in range(1, len(path_to_conf)-1):
+  	path_to_data += "/"+path_to_conf[i]
+
+    grbdir = path_to_data
+
+    print grbdir  
+    
+    path_to_plotfile = plotfile.split("/")[0]
+    
+    grid_dir = "/mnt/nas_czti/massmodelgrid"
+    depth = 4 # For now hard coded this. Let's see if we can make this better later
+    
+    pdf_file = PdfPages(plotfile)
+    loc_txt_file = path_to_plotfile+"/"+grb_name+"_loc_table.txt"
+    joint_tab_file = path_to_plotfile+"/"+grb_name+"_joint_table.txt"
+    area_txt_file = path_to_plotfile+"/"+grb_name+"_area_table.txt"
+
+    fluence = 4.8e-5
     emin = 10.0
     emax = 1000.0
-    alpha = -1.0
-    beta = -2.5
-    E0 = 300
-    typ = "band"
-#    print "======================================================================================"
-#
-    # Reading files containing arrays of theta and phi for the grid
+##    alpha = -1.0
+##    beta = -2.5
+##    E0 = 300
+##    typ = "band"
+##    print "======================================================================================"
+
+   # Reading files containing arrays of theta and phi for the grid
 
     theta_tab = Table.read("final_theta.txt",format="ascii")
     theta_arr = theta_tab["theta"].data
     phi_tab = Table.read("final_phi.txt", format="ascii")
-    phi_arr = phi_tab["phi"].data
-    
-    rand_indices = np.random.randint(len(theta_arr), size=10)
+    phi_arr = phi_tab["phi"].data    
+ 
+##    rand_indices = random.sample(range(0,len(theta_arr)),100)
 
-    inj_thetas = theta_arr[rand_indices]
-    inj_phis = phi_arr[rand_indices]
+##    inj_thetas = theta_arr[rand_indices]
+##    inj_phis = phi_arr[rand_indices]
 
-    run_inj_grb_file = open("run_injected_test.sh","w")
-    run_inj_grb_file.write("#!/bin/sh"+"\n")
-    inj_dir="/mnt/nas_czti/individual/arvind/Data/injected_GRB_data"
-    data_dir="/mnt/nas_czti/individual/arvind/Data/old_data/GRBinjected"
-    for i in range(len(inj_thetas)):
-        conf_file = gen_inj_conf(data_dir,inj_dir,inj_thetas[i],inj_phis[i],fluence,emin,emax,alpha,beta,E0,typ,223271800,1,223271000,223271200,223272000,223272200)
-	run_inj_grb_file.write("python trans_loc.py "+conf_file+" 10 --do_inject_grb True"+"\n")
-    run_inj_grb_file.close()
+##    run_inj_grb_file = open("run_injected_test.sh","w")
+##    run_inj_grb_file.write("#!/bin/sh"+"\n")
+##    inj_dir="/mnt/nas_czti/individual/arvind/Data/injected_GRB_data"
+##    data_dir="/mnt/nas_czti/individual/arvind/Data/old_data/GRBinjected"
+##    for i in range(len(inj_thetas)):
+##        conf_file = gen_inj_conf(data_dir,inj_dir,inj_thetas[i],inj_phis[i],fluence,emin,emax,alpha,beta,E0,typ,223271800,1,223271000,223271200,223272000,223272200)
+##	run_inj_grb_file.write("python trans_loc.py "+conf_file+" 10 --do_inject_grb True"+"\n")
+##    run_inj_grb_file.close()
+  
+    # Converting the (RA,DEC) coordinates to (theta,phi).
+    if (args.do_inject_grb==False):
+        trans_theta, trans_phi, thetax,thetay, czti_x, czti_y, czti_z, transient, earth = get_angles(mkffile, trigtime, ra_tran, dec_tran, window=10)
+    else :
+        trans_theta = ra_tran
+        trans_phi = dec_tran
+    print "The coordinates of the transient in CZTI frame are : THETA = ",trans_theta,", PHI = ",trans_phi
+
+    pix_id, pix_theta, pix_phi = get_center(depth,trans_theta,trans_phi)
+
+    #print "The pixel in which the transient lies is : ",pix_id,"(for depth = ",depth,")" 
+    print "The coordinates of the pixel are : THETA = ",pix_theta,", PHI = ",pix_phi
     
-#    # Converting the (RA,DEC) coordinates to (theta,phi).
-#    if (args.do_inject_grb==False):
-#        trans_theta, trans_phi, thetax,thetay, czti_x, czti_y, czti_z, transient, earth = get_angles(mkffile, trigtime, ra_tran, dec_tran, window=10)
-#    else :
-#        trans_theta = ra_tran
-#        trans_phi = dec_tran
-#    print "The coordinates of the transient in CZTI frame are : THETA = ",trans_theta,", PHI = ",trans_phi
-#
-#    pix_id, pix_theta, pix_phi = get_center(depth,trans_theta,trans_phi)
-#
-#    #print "The pixel in which the transient lies is : ",pix_id,"(for depth = ",depth,")" 
-#    print "The coordinates of the pixel are : THETA = ",pix_theta,", PHI = ",pix_phi
-#    
-#    sel_theta_arr, sel_phi_arr = get_neighbours(pix_theta,pix_phi,theta_arr,phi_arr,sep_angle=args.radius)
-#    
-#    grid_sel_theta_arr, grid_sel_phi_arr = get_neighbours(pix_theta,pix_phi,theta_arr,phi_arr,sep_angle=5.0)
-# 
-#    print "The theta's of the selected pixels : ",sel_theta_arr
-#    print "The phi's of the selected pixels : ",sel_phi_arr
-#
-#    # Plotting the lightcurves for all quadrants 
-#
-#    plot_lc(grb_name,infile,trans_theta,trans_phi,grb_tstart,grb_tend,pre_tstart,pre_tend,post_tstart,post_tend,pdf_file)
-#
-#   ##################### Plotting all sim dphs at the selected points ###############################
-#    if (args.do_inject_grb==False):
-#        plot_sim_dph_png(grbdir,grid_dir,grid_sel_theta_arr,grid_sel_phi_arr,typ,t_src,alpha,beta,E0,A)
-#    else :
-#        t_src = 1.0
-#        plot_sim_dph_png(grbdir,grid_dir,grid_sel_theta_arr,grid_sel_phi_arr,typ,t_src,alpha,beta,E0,A)
-#
-#   ##################################################################################################
-#
-#    # Plotting the grid points around the known position of the transient
-#
-#    plot_grid_dph(pdf_file,grb_name,pix_theta,pix_phi,grid_sel_theta_arr,grid_sel_phi_arr,5.0)
-#    plot_grid(pdf_file,grb_name,pix_theta,pix_phi,sel_theta_arr,sel_phi_arr,args.radius)
-#    
-#    # Now we have all the points. So, we can move on to calculating the dphs for all these points
-#    print "========================================================================================"
-#
-#
-#    # Calling the function to get the data_dph 
-#    if (args.do_inject_grb==False):
-#        flat_grb_dph,flat_bkgd_dph,grb_dph,bkgd_dph,t_src,t_tot = data_bkgd_image(grbdir,infile,pre_tstart,pre_tend,grb_tstart,grb_tend,post_tstart,post_tend)
-#        src_dph = grb_dph - bkgd_dph*t_src/t_tot
-#    else :
-#        t_src = 1.0
-#        print "############################# Injecting GRB at theta={t:0.2f}, phi={p:0.2f} ##########################".format(t=trans_theta,p=trans_phi)
-#        src_dph, bkgd_dph, grb_dph, A = inject_grb(trans_theta,trans_phi,infile,grbdir,grid_dir,pre_tstart,pre_tend,post_tstart,post_tend,t_src,typ,alpha,beta,E0,fluence,emin,emax)
-#    
-#    sim_flat,sim_dph,badpix_mask,sim_err_dph = simulated_dph(grbdir,grid_dir,pix_theta,pix_phi,typ,t_src,alpha,beta,E0,A)
-#    
-#    # Plotting the badpix corrected dphs 
-#    
-#    plot_sim_data_dphs(pdf_file,grb_name,trans_theta,trans_phi,pix_theta,pix_phi,sim_dph,grb_dph,bkgd_dph,badpix_mask,t_src,t_tot,pixbin)
-#    
-#    print "========================================================================================"
-#
-#    # Joint fit 
-#    if (args.do_joint_fit==True):
-#
-#    	make_joint_table(joint_tab_file,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,alpha,beta,E0,A)
-#
-#    # Calculating chi_sq before and after scaling
-#    
-#    chi_sq_wo_sca_arr, chi_sq_sca_arr = calc_chi_sq(loc_txt_file,pdf_file,grb_name,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,args.do_joint_fit,joint_tab_file,alpha,beta,E0,A)
-#    
-#
-#    print "========================================================================================"
-#
-#
-#    # Plotting the contour plots (The data is read out from the files)
-#    
-#    tab = Table.read(loc_txt_file,format='ascii')
-#
-#    chi_sq_wo_sca_arr = tab['chi_sq_wo_sca'].data
-#    chi_sq_sca_arr = tab['chi_sq_sca'].data
-#    scaling_arr = tab['scaling'].data
-#    intercept_arr = tab['intercept'].data
-#
-#    s_1_ar,s_2_ar,s_3_ar,per_90_ar,per_99_ar,s_1_ar_sca,s_2_ar_sca,s_3_ar_sca,per_90_ar_sca,per_99_ar_sca = plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,sel_theta_arr,sel_phi_arr,chi_sq_wo_sca_arr,chi_sq_sca_arr,args.radius)
-#    
-#    area_table = Table([[s_1_ar],[s_2_ar],[s_3_ar],[per_90_ar],[per_99_ar],[s_1_ar_sca],[s_2_ar_sca],[s_3_ar_sca],[per_90_ar_sca],[per_99_ar_sca]], names=["s_1_ar","s_2_ar","s_3_ar","per_90_ar","per_99_ar","s_1_ar_sca","s_2_ar_sca","s_3_ar_sca","per_90_ar_sca","per_99_ar_sca"])
-#    area_table.write(area_txt_file,format="ascii")
-#  
-#    t1 = time.time()
-#
-#    t_final = t1-t0
-#    print "Time taken for the code to run (s) : ",t_final
+    sel_theta_arr, sel_phi_arr = get_neighbours(pix_theta,pix_phi,theta_arr,phi_arr,sep_angle=args.radius)
+    
+    grid_sel_theta_arr, grid_sel_phi_arr = get_neighbours(pix_theta,pix_phi,theta_arr,phi_arr,sep_angle=5.0)
+ 
+    print "The theta's of the selected pixels : ",sel_theta_arr
+    print "The phi's of the selected pixels : ",sel_phi_arr
+
+    # Plotting the lightcurves for all quadrants 
+
+    plot_lc(grb_name,infile,trans_theta,trans_phi,grb_tstart,grb_tend,pre_tstart,pre_tend,post_tstart,post_tend,pdf_file)
+
+   ##################### Plotting all sim dphs at the selected points ###############################
+    if (args.do_inject_grb==False):
+        plot_sim_dph_png(grbdir,grid_dir,grid_sel_theta_arr,grid_sel_phi_arr,typ,t_src,alpha,beta,E0,A)
+    else :
+        t_src = 1.0
+        plot_sim_dph_png(grbdir,grid_dir,grid_sel_theta_arr,grid_sel_phi_arr,typ,t_src,alpha,beta,E0,A)
+
+   ##################################################################################################
+
+    # Plotting the grid points around the known position of the transient
+
+    plot_grid_dph(pdf_file,grb_name,pix_theta,pix_phi,grid_sel_theta_arr,grid_sel_phi_arr,5.0)
+    plot_grid(pdf_file,grb_name,pix_theta,pix_phi,sel_theta_arr,sel_phi_arr,args.radius)
+    
+    # Now we have all the points. So, we can move on to calculating the dphs for all these points
+    print "========================================================================================"
+
+
+    # Calling the function to get the data_dph 
+    if (args.do_inject_grb==False):
+        flat_grb_dph,flat_bkgd_dph,grb_dph,bkgd_dph,t_src,t_tot = data_bkgd_image(grbdir,infile,pre_tstart,pre_tend,grb_tstart,grb_tend,post_tstart,post_tend)
+        src_dph = grb_dph - bkgd_dph*t_src/t_tot
+    else :
+        t_src = 1.0
+        print "############################# Injecting GRB at theta={t:0.2f}, phi={p:0.2f} ##########################".format(t=trans_theta,p=trans_phi)
+        src_dph, bkgd_dph, grb_dph, A = inject_grb(trans_theta,trans_phi,infile,grbdir,grid_dir,pre_tstart,pre_tend,post_tstart,post_tend,t_src,typ,alpha,beta,E0,fluence,emin,emax)
+    
+    sim_flat,sim_dph,badpix_mask,sim_err_dph = simulated_dph(grbdir,grid_dir,pix_theta,pix_phi,typ,t_src,alpha,beta,E0,A)
+    
+    # Plotting the badpix corrected dphs 
+    
+    plot_sim_data_dphs(pdf_file,grb_name,trans_theta,trans_phi,pix_theta,pix_phi,sim_dph,grb_dph,bkgd_dph,badpix_mask,t_src,t_tot,pixbin)
+    
+    print "========================================================================================"
+
+    # Joint fit 
+    if (args.do_joint_fit==True):
+
+    	make_joint_table(joint_tab_file,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,alpha,beta,E0,A)
+
+    # Calculating chi_sq before and after scaling
+    
+    chi_sq_wo_sca_arr, chi_sq_sca_arr = calc_chi_sq(loc_txt_file,pdf_file,grb_name,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,args.do_joint_fit,joint_tab_file,alpha,beta,E0,A)
+    
+
+    print "========================================================================================"
+
+
+    # Plotting the contour plots (The data is read out from the files)
+    
+    tab = Table.read(loc_txt_file,format='ascii')
+
+    chi_sq_wo_sca_arr = tab['chi_sq_wo_sca'].data
+    chi_sq_sca_arr = tab['chi_sq_sca'].data
+    scaling_arr = tab['scaling'].data
+    intercept_arr = tab['intercept'].data
+
+    s_1_ar,s_2_ar,s_3_ar,per_90_ar,per_99_ar,s_1_ar_sca,s_2_ar_sca,s_3_ar_sca,per_90_ar_sca,per_99_ar_sca = plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,sel_theta_arr,sel_phi_arr,chi_sq_wo_sca_arr,chi_sq_sca_arr,args.radius)
+    
+    area_table = Table([[s_1_ar],[s_2_ar],[s_3_ar],[per_90_ar],[per_99_ar],[s_1_ar_sca],[s_2_ar_sca],[s_3_ar_sca],[per_90_ar_sca],[per_99_ar_sca]], names=["s_1_ar","s_2_ar","s_3_ar","per_90_ar","per_99_ar","s_1_ar_sca","s_2_ar_sca","s_3_ar_sca","per_90_ar_sca","per_99_ar_sca"])
+    area_table.write(area_txt_file,format="ascii")
+  
+    t1 = time.time()
+
+    t_final = t1-t0
+    print "Time taken for the code to run (s) : ",t_final
