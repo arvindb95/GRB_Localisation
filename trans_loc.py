@@ -8,8 +8,11 @@
 
 """
 ########################### Importing required libraries ########################################
+import matplotlib
+matplotlib.use("Agg")
 
 import numpy as np
+import math as m
 import matplotlib.pyplot as plt
 from astropy.io import fits
 from astropy.table import Table
@@ -1268,7 +1271,17 @@ def get_contour_area(X,Y,Z,Level):
 
     return cont_area
 
-def plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,sel_theta_arr,sel_phi_arr,chi_sq_wo_sca_arr,chi_sq_sca_arr,search_radius):
+def chi_sq_pdf(chi_sq_arr,dof):
+    """
+    Calculates the pdf of the chi-square distribution for a given degrees of freedom
+
+    Inputs:
+    chi_sq_arr = array of chi_sq_values
+    dof = degrees of freedom of the problem
+    """
+    return (chi_sq**((dof/2.0)-1.0) * np.exp(-chi_sq/2.0))/(2**(dof/2.0) * m.factorial((dof/2.0)-1.0))
+
+def plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,pix_theta,pix_phi,sel_theta_arr,sel_phi_arr,chi_sq_wo_sca_arr,chi_sq_sca_arr,search_radius):
     """
     Plots the 3d and contour plots for the localisation from the calculated chi_sq values at the selected locations
 
@@ -1284,7 +1297,19 @@ def plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,sel_theta_arr,sel_p
 
     Returns :
     Saves the plot into the pdf_file
-    """
+    """ 
+    chi_sq_list = np.arange(0,max(max(chi_sq_wo_sca_arr),max(chi_sq_sca_arr)))
+
+    sel_index = np.where(sel_theta_arr==pix_theta)[0]
+
+    sel_chi_sq_wo_sca = chi_sq_wo_sca_arr[sel_index]
+ 
+    percent_wo_sca = quad(chi_sq_pdf, 0, sel_chi_sq_wo_sca, args=(62))[0]
+
+    sel_chi_sq_sca = chi_sq_sca_arr[sel_index]
+
+    percent_sca = quad(chi_sq_pdf, 0, sel_chi_sq_sca, args=(60))[0]    
+
     fig = plt.figure()
     #plt.style.use("dark_background")
 
@@ -1300,6 +1325,9 @@ def plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,sel_theta_arr,sel_p
     sca_1 = np.nanmin(Z1)/62.0
     sca_2 = np.nanmin(Z2)/60.0
 
+    n_sigma_wo_sca = (sel_chi_sq_wo_sca - np.nanmin(Z1))/sca_1
+    n_sigma_sca = (sel_chi_sq_sca - np.nanmin(Z2))/sca_2
+
     print "############## Chi sq min for unscaled data ##################"
     print np.nanmin(Z1)
     print "############## Chi sq min factor for scaled data ####################"
@@ -1314,6 +1342,7 @@ def plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,sel_theta_arr,sel_p
     map.contour(map_Xi,map_Yi,Z1,[np.nanmin(Z1)+1*sca_1,np.nanmin(Z1)+2*sca_1,np.nanmin(Z1)+3*sca_1],colors=["C0","C1","C2"],linewidths=0.75)
     x_trans, y_trans = map(trans_phi, 90-trans_theta)
     grb = map.plot(x_trans,y_trans,"k+")
+    plt.text(x_trans,y_trans,r"{n:0.1f}$\sigma$".format(n=n_sigma_wo_sca))
     sigma_1_area = get_contour_area(X,Y,Z1,np.nanmin(Z1)+1*sca_1)
     sigma_2_area = get_contour_area(X,Y,Z1,np.nanmin(Z1)+2*sca_1)
     sigma_3_area = get_contour_area(X,Y,Z1,np.nanmin(Z1)+3*sca_1)
@@ -1323,7 +1352,7 @@ def plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,sel_theta_arr,sel_p
     line1= pl.Line2D(range(10), range(10), marker='None', linestyle='-',linewidth=0.75, color="C0")
     line2= pl.Line2D(range(10), range(10), marker='None', linestyle='-',linewidth=0.75, color="C1")
     line3= pl.Line2D(range(10), range(10), marker='None', linestyle='-',linewidth=0.75, color="C2")
-    ax3.legend(("k+",line1,line2,line3),(grb_name,r"1-$\sigma$ area={a:0.2f}".format(a=sigma_1_area),r"2-$\sigma$ area={a:0.2f}".format(a=sigma_2_area),r"3-$\sigma$ area={a:0.2f}".format(a=sigma_3_area)),numpoints=1,loc='upper right',prop={'size':6})
+    ax3.legend(("k+",line1,line2,line3),(grb_name,r"1-$\sigma$ area={a:0.2f} deg$^{{2}}$".format(a=sigma_1_area),r"2-$\sigma$ area={a:0.2f} deg$^{{2}}$".format(a=sigma_2_area),r"3-$\sigma$ area={a:0.2f} deg$^{{2}}$".format(a=sigma_3_area)),numpoints=1,loc='upper right',prop={'size':6})
 
     ax4 = fig.add_subplot(222)
     map = Basemap(projection="ortho",llcrnrx=-ax_sca*search_radius*10**5,llcrnry=-ax_sca*search_radius*10**5,urcrnrx=ax_sca*search_radius*10**5,urcrnry=ax_sca*search_radius*10**5, lat_0=90-trans_theta,lon_0=trans_phi)
@@ -1331,6 +1360,7 @@ def plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,sel_theta_arr,sel_p
     map.contour(map_Xi,map_Yi,Z2,[np.nanmin(Z2)+1*sca_2,np.nanmin(Z2)+2*sca_2,np.nanmin(Z2)+3*sca_2],colors=["C0","C1","C2"],linewidths=0.75)
     x_trans, y_trans = map(trans_phi, 90-trans_theta)
     grb = map.plot(x_trans,y_trans,"k+")
+    plt.text(x_trans,y_trans,r"{n:0.1f}$$\sigma".format(n=n_sigma_sca))
     sigma_1_area_sca = get_contour_area(X,Y,Z2,np.nanmin(Z2)+1*sca_2)
     sigma_2_area_sca = get_contour_area(X,Y,Z2,np.nanmin(Z2)+2*sca_2)
     sigma_3_area_sca = get_contour_area(X,Y,Z2,np.nanmin(Z2)+3*sca_2)
@@ -1340,7 +1370,7 @@ def plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,sel_theta_arr,sel_p
     line1= pl.Line2D(range(10), range(10), marker='None', linestyle='-',linewidth=0.75, color="C0")
     line2= pl.Line2D(range(10), range(10), marker='None', linestyle='-',linewidth=0.75, color="C1")
     line3= pl.Line2D(range(10), range(10), marker='None', linestyle='-',linewidth=0.75, color="C2")
-    ax4.legend(("k+",line1,line2,line3),(grb_name,r"1-$\sigma$ area={a:0.2f}".format(a=sigma_1_area_sca),r"2-$\sigma$ area={a:0.2f}".format(a=sigma_2_area_sca),r"3-$\sigma$ area={a:0.2f}".format(a=sigma_3_area_sca)),numpoints=1,loc='upper right',prop={'size':6})
+    ax4.legend(("k+",line1,line2,line3),(grb_name,r"1-$\sigma$ area={a:0.2f} deg$^{{2}}$".format(a=sigma_1_area_sca),r"2-$\sigma$ area={a:0.2f} deg$^{{2}}$".format(a=sigma_2_area_sca),r"3-$\sigma$ area={a:0.2f} deg$^{{2}}$".format(a=sigma_3_area_sca)),numpoints=1,loc='upper right',prop={'size':6})
     
     ax1 = fig.add_subplot(223)
     map = Basemap(projection="ortho",llcrnrx=-ax_sca*search_radius*10**5,llcrnry=-ax_sca*search_radius*10**5,urcrnrx=ax_sca*search_radius*10**5,urcrnry=ax_sca*search_radius*10**5, lat_0=90-trans_theta,lon_0=trans_phi)
@@ -1348,6 +1378,7 @@ def plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,sel_theta_arr,sel_p
     map.contour(map_Xi,map_Yi,Z1,[76.630*sca_1,90.802*sca_1],colors=["C0","C1"],linewidths=0.75)
     x_trans, y_trans = map(trans_phi, 90-trans_theta)
     map.plot(x_trans,y_trans,"k+")
+    plt.text(x_trans,y_trans,"{p:0.1f}%".format(p=percent_wo_sca))
     percent_90_area = get_contour_area(X,Y,Z1,76.630*sca_1)
     percent_99_area = get_contour_area(X,Y,Z1,90.802*sca_1)
     map.drawmeridians(np.arange(0,360,30), labels=[0,0,0,1],labelstyle="+/-")
@@ -1355,7 +1386,7 @@ def plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,sel_theta_arr,sel_p
 
     line1= pl.Line2D(range(10), range(10), marker='None', linestyle='-',linewidth=0.75, color="C0")
     line2= pl.Line2D(range(10), range(10), marker='None', linestyle='-',linewidth=0.75, color="C1")
-    ax1.legend(("k+",line1,line2),(grb_name,"90 % area={a:0.2f}".format(a=percent_90_area),"99 % area={a:0.2f}".format(a=percent_99_area)),numpoints=1,loc='upper right',prop={'size':6})
+    ax1.legend(("k+",line1,line2),(grb_name,r"90 % area={a:0.2f} deg$^{{2}}$".format(a=percent_90_area),r"99 % area={a:0.2f} deg$^{{2}}$".format(a=percent_99_area)),numpoints=1,loc='upper right',prop={'size':6})
 
     ax2 = fig.add_subplot(224) 
     map = Basemap(projection="ortho",llcrnrx=-ax_sca*search_radius*10**5,llcrnry=-ax_sca*search_radius*10**5,urcrnrx=ax_sca*search_radius*10**5,urcrnry=ax_sca*search_radius*10**5, lat_0=90-trans_theta,lon_0=trans_phi)
@@ -1363,6 +1394,7 @@ def plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,sel_theta_arr,sel_p
     map.contour(map_Xi,map_Yi,Z2,[74.397*sca_2,88.379*sca_2],colors=["C0","C1"],linewidths=0.75)
     x_trans, y_trans = map(trans_phi, 90-trans_theta)
     grb = map.plot(x_trans,y_trans,"k+")
+    plt.text(x_trans,y_trans,"{p:0.1f}%".format(p=percent_sca))
     percent_90_area_sca = get_contour_area(X,Y,Z2,74.397*sca_2)
     percent_99_area_sca = get_contour_area(X,Y,Z2,88.379*sca_2)
     def setcolor(x, color):
@@ -1387,8 +1419,7 @@ def plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,sel_theta_arr,sel_p
     fig.set_size_inches([6.5,6.5])
     pdf_file.savefig(fig)
   
-    return sigma_1_area,sigma_2_area,sigma_3_area,percent_90_area,percent_99_area,sigma_1_area_sca,sigma_2_area_sca,sigma_3_area_sca,percent_90_area_sca,percent_99_area_sca
-
+    return sigma_1_area,sigma_2_area,sigma_3_area,percent_90_area,percent_99_area,sigma_1_area_sca,sigma_2_area_sca,sigma_3_area_sca,percent_90_area_sca,percent_99_area_sca,n_sigma_wo_sca,n_sigma_sca,percent_wo_sca,percent_sca
 
 ##################################### Main function begins #########################################
 
@@ -1508,11 +1539,11 @@ if __name__ == "__main__":
     plot_lc(grb_name,infile,trans_theta,trans_phi,grb_tstart,grb_tend,pre_tstart,pre_tend,post_tstart,post_tend,pdf_file)
 
    ##################### Plotting all sim dphs at the selected points ###############################
-    if (args.do_inject_grb==False):
-        plot_sim_dph_png(grbdir,grid_dir,grid_sel_theta_arr,grid_sel_phi_arr,typ,t_src,alpha,beta,E0,A)
-    else :
-        t_src = 1.0
-        plot_sim_dph_png(grbdir,grid_dir,grid_sel_theta_arr,grid_sel_phi_arr,typ,t_src,alpha,beta,E0,A)
+#    if (args.do_inject_grb==False):
+#        plot_sim_dph_png(grbdir,grid_dir,grid_sel_theta_arr,grid_sel_phi_arr,typ,t_src,alpha,beta,E0,A)
+#    else :
+#        t_src = 1.0
+#        plot_sim_dph_png(grbdir,grid_dir,grid_sel_theta_arr,grid_sel_phi_arr,typ,t_src,alpha,beta,E0,A)
 
    ##################################################################################################
 
@@ -1549,7 +1580,7 @@ if __name__ == "__main__":
 
     # Calculating chi_sq before and after scaling
     
-    chi_sq_wo_sca_arr, chi_sq_sca_arr = calc_chi_sq(loc_txt_file,pdf_file,grb_name,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,args.do_joint_fit,joint_tab_file,alpha,beta,E0,A)
+#    chi_sq_wo_sca_arr, chi_sq_sca_arr = calc_chi_sq(loc_txt_file,pdf_file,grb_name,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,args.do_joint_fit,joint_tab_file,alpha,beta,E0,A)
     
 
     print "========================================================================================"
@@ -1564,9 +1595,9 @@ if __name__ == "__main__":
     scaling_arr = tab['scaling'].data
     intercept_arr = tab['intercept'].data
 
-    s_1_ar,s_2_ar,s_3_ar,per_90_ar,per_99_ar,s_1_ar_sca,s_2_ar_sca,s_3_ar_sca,per_90_ar_sca,per_99_ar_sca = plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,sel_theta_arr,sel_phi_arr,chi_sq_wo_sca_arr,chi_sq_sca_arr,args.radius)
+    s_1_ar,s_2_ar,s_3_ar,per_90_ar,per_99_ar,s_1_ar_sca,s_2_ar_sca,s_3_ar_sca,per_90_ar_sca,per_99_ar_sca,n_sigma_wo_sca,n_sigma_sca,percent_wo_sca,percent_sca = plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,pix_theta,pix_phi,sel_theta_arr,sel_phi_arr,chi_sq_wo_sca_arr,chi_sq_sca_arr,args.radius)
     
-    area_table = Table([[s_1_ar],[s_2_ar],[s_3_ar],[per_90_ar],[per_99_ar],[s_1_ar_sca],[s_2_ar_sca],[s_3_ar_sca],[per_90_ar_sca],[per_99_ar_sca]], names=["s_1_ar","s_2_ar","s_3_ar","per_90_ar","per_99_ar","s_1_ar_sca","s_2_ar_sca","s_3_ar_sca","per_90_ar_sca","per_99_ar_sca"])
+    area_table = Table([[s_1_ar],[s_2_ar],[s_3_ar],[per_90_ar],[per_99_ar],[s_1_ar_sca],[s_2_ar_sca],[s_3_ar_sca],[per_90_ar_sca],[per_99_ar_sca],[n_sigma_wo_sca],[n_sigma_sca],[percent_wo_sca],[percent_sca]], names=["s_1_ar","s_2_ar","s_3_ar","per_90_ar","per_99_ar","s_1_ar_sca","s_2_ar_sca","s_3_ar_sca","per_90_ar_sca","per_99_ar_sca","n_sigma_wo_sca","n_sigma_sca","percent_wo_sca","percent_sca"])
     area_table.write(area_txt_file,format="ascii")
   
     t1 = time.time()
