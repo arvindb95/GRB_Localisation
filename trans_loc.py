@@ -1279,7 +1279,7 @@ def chi_sq_pdf(chi_sq_arr,dof):
     chi_sq_arr = array of chi_sq_values
     dof = degrees of freedom of the problem
     """
-    return (chi_sq**((dof/2.0)-1.0) * np.exp(-chi_sq/2.0))/(2**(dof/2.0) * m.factorial((dof/2.0)-1.0))
+    return (chi_sq_arr**((dof/2.0)-1.0) * np.exp(-chi_sq_arr/2.0))/(2**(dof/2.0) * m.factorial((dof/2.0)-1.0))
 
 def plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,pix_theta,pix_phi,sel_theta_arr,sel_phi_arr,chi_sq_wo_sca_arr,chi_sq_sca_arr,search_radius):
     """
@@ -1300,18 +1300,17 @@ def plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,pix_theta,pix_phi,s
     """ 
     chi_sq_list = np.arange(0,max(max(chi_sq_wo_sca_arr),max(chi_sq_sca_arr)))
 
-    sel_index = np.where(sel_theta_arr==pix_theta)[0]
+    sel_index = np.where(sel_theta_arr==np.around(pix_theta,decimals=2))[0]
 
     sel_chi_sq_wo_sca = chi_sq_wo_sca_arr[sel_index]
  
     percent_wo_sca = quad(chi_sq_pdf, 0, sel_chi_sq_wo_sca, args=(62))[0]
-
+        
     sel_chi_sq_sca = chi_sq_sca_arr[sel_index]
 
     percent_sca = quad(chi_sq_pdf, 0, sel_chi_sq_sca, args=(60))[0]    
 
     fig = plt.figure()
-    #plt.style.use("dark_background")
 
     plt.suptitle(r"$\chi^2$ plots for "+grb_name+"; Left: Without scaling, Right: With scaling")
 
@@ -1325,8 +1324,8 @@ def plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,pix_theta,pix_phi,s
     sca_1 = np.nanmin(Z1)/62.0
     sca_2 = np.nanmin(Z2)/60.0
 
-    n_sigma_wo_sca = (sel_chi_sq_wo_sca - np.nanmin(Z1))/sca_1
-    n_sigma_sca = (sel_chi_sq_sca - np.nanmin(Z2))/sca_2
+    n_sigma_wo_sca = ((sel_chi_sq_wo_sca - np.nanmin(Z1))/sca_1)[0]
+    n_sigma_sca = ((sel_chi_sq_sca - np.nanmin(Z2))/sca_2)[0]
 
     print "############## Chi sq min for unscaled data ##################"
     print np.nanmin(Z1)
@@ -1360,7 +1359,7 @@ def plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,pix_theta,pix_phi,s
     map.contour(map_Xi,map_Yi,Z2,[np.nanmin(Z2)+1*sca_2,np.nanmin(Z2)+2*sca_2,np.nanmin(Z2)+3*sca_2],colors=["C0","C1","C2"],linewidths=0.75)
     x_trans, y_trans = map(trans_phi, 90-trans_theta)
     grb = map.plot(x_trans,y_trans,"k+")
-    plt.text(x_trans,y_trans,r"{n:0.1f}$$\sigma".format(n=n_sigma_sca))
+    plt.text(x_trans,y_trans,r"{n:0.1f}$\sigma$".format(n=n_sigma_sca))
     sigma_1_area_sca = get_contour_area(X,Y,Z2,np.nanmin(Z2)+1*sca_2)
     sigma_2_area_sca = get_contour_area(X,Y,Z2,np.nanmin(Z2)+2*sca_2)
     sigma_3_area_sca = get_contour_area(X,Y,Z2,np.nanmin(Z2)+3*sca_2)
