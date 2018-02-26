@@ -1486,11 +1486,11 @@ if __name__ == "__main__":
     fluence = 4.8e-5
     emin = 10.0
     emax = 1000.0
-##    alpha = -1.0
-##    beta = -2.5
-##    E0 = 300
-##    typ = "band"
-##    print "======================================================================================"
+###    alpha = -1.0
+###    beta = -2.5
+###    E0 = 300
+###    typ = "band"
+    print "======================================================================================"
 
    # Reading files containing arrays of theta and phi for the grid
 
@@ -1499,19 +1499,33 @@ if __name__ == "__main__":
     phi_tab = Table.read("final_phi.txt", format="ascii")
     phi_arr = phi_tab["phi"].data    
  
-##    rand_indices = random.sample(range(0,len(theta_arr)),100)
-
-##    inj_thetas = theta_arr[rand_indices]
-##    inj_phis = phi_arr[rand_indices]
-
-##    run_inj_grb_file = open("run_injected_test.sh","w")
-##    run_inj_grb_file.write("#!/bin/sh"+"\n")
-##    inj_dir="/mnt/nas_czti/individual/arvind/Data/injected_GRB_data"
-##    data_dir="/mnt/nas_czti/individual/arvind/Data/old_data/GRBinjected"
-##    for i in range(len(inj_thetas)):
-##        conf_file = gen_inj_conf(data_dir,inj_dir,inj_thetas[i],inj_phis[i],fluence,emin,emax,alpha,beta,E0,typ,223271800,1,223271000,223271200,223272000,223272200)
-##	run_inj_grb_file.write("python trans_loc.py "+conf_file+" 10 --do_inject_grb True"+"\n")
-##    run_inj_grb_file.close()
+###    sort_ind = np.argsort(theta_arr)
+###    sort_theta = theta_arr[sort_ind]
+###    sort_phi = phi_arr[sort_ind]
+###   
+###    weigths = np.sin(np.deg2rad(sort_theta))/(np.sin(np.deg2rad(sort_theta))).sum()
+###
+###    random_index = np.random.choice(sort_ind,size=100,p=weigths, replace=False)
+###
+###    inj_thetas = sort_theta[random_index]
+###    inj_phis = sort_phi[random_index]    
+###    
+###    print inj_thetas
+###    plt.hist(inj_thetas,bins=np.arange(0,185,5))
+###    plt.savefig("test.png")
+###    print inj_phis
+###
+###    inj_tab = Table([inj_thetas,inj_phis],names=["inj_theta","inj_phi"])
+###
+###    run_inj_grb_file = open("run_injected_test.sh","w")
+###    run_inj_grb_file.write("#!/bin/sh"+"\n")
+###    inj_dir="/mnt/nas_czti/individual/arvind/Data/injected_GRB_data"
+###    data_dir="/mnt/nas_czti/individual/arvind/Data/old_data/GRBinjected"
+###    for i in range(len(inj_thetas)):
+###        conf_file = gen_inj_conf(data_dir,inj_dir,inj_thetas[i],inj_phis[i],fluence,emin,emax,alpha,beta,E0,typ,223271800,1,223271000,223271200,223272000,223272200)
+###	run_inj_grb_file.write("python trans_loc.py "+conf_file+" 10 --do_inject_grb True"+"\n")
+###    run_inj_grb_file.close()
+###    inj_tab.write(inj_dir+"/inj_theta_phi.txt",format="ascii")
   
     # Converting the (RA,DEC) coordinates to (theta,phi).
     if (args.do_inject_grb==False):
@@ -1538,11 +1552,11 @@ if __name__ == "__main__":
     plot_lc(grb_name,infile,trans_theta,trans_phi,grb_tstart,grb_tend,pre_tstart,pre_tend,post_tstart,post_tend,pdf_file)
 
    ##################### Plotting all sim dphs at the selected points ###############################
-#    if (args.do_inject_grb==False):
-#        plot_sim_dph_png(grbdir,grid_dir,grid_sel_theta_arr,grid_sel_phi_arr,typ,t_src,alpha,beta,E0,A)
-#    else :
-#        t_src = 1.0
-#        plot_sim_dph_png(grbdir,grid_dir,grid_sel_theta_arr,grid_sel_phi_arr,typ,t_src,alpha,beta,E0,A)
+    if (args.do_inject_grb==False):
+        plot_sim_dph_png(grbdir,grid_dir,grid_sel_theta_arr,grid_sel_phi_arr,typ,t_src,alpha,beta,E0,A)
+    else :
+        t_src = 1.0
+        plot_sim_dph_png(grbdir,grid_dir,grid_sel_theta_arr,grid_sel_phi_arr,typ,t_src,alpha,beta,E0,A)
 
    ##################################################################################################
 
@@ -1579,7 +1593,7 @@ if __name__ == "__main__":
 
     # Calculating chi_sq before and after scaling
     
-#    chi_sq_wo_sca_arr, chi_sq_sca_arr = calc_chi_sq(loc_txt_file,pdf_file,grb_name,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,args.do_joint_fit,joint_tab_file,alpha,beta,E0,A)
+    chi_sq_wo_sca_arr, chi_sq_sca_arr = calc_chi_sq(loc_txt_file,pdf_file,grb_name,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,args.do_joint_fit,joint_tab_file,alpha,beta,E0,A)
     
 
     print "========================================================================================"
