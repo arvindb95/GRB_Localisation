@@ -1303,13 +1303,18 @@ def plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,pix_theta,pix_phi,s
     sel_index = np.where(sel_theta_arr==np.around(pix_theta,decimals=2))[0]
 
     sel_chi_sq_wo_sca = chi_sq_wo_sca_arr[sel_index]
- 
-    percent_wo_sca = quad(chi_sq_pdf, 0, sel_chi_sq_wo_sca, args=(62))[0]
-        
+    try :
+    	percent_wo_sca = quad(chi_sq_pdf, 0, sel_chi_sq_wo_sca, args=(62))[0]
+    except :
+        print "**********Could not calculate percentage confidence at the location without scaling!*****************"    
+        percent_wo_sca = 0
     sel_chi_sq_sca = chi_sq_sca_arr[sel_index]
 
-    percent_sca = quad(chi_sq_pdf, 0, sel_chi_sq_sca, args=(60))[0]    
-
+    try : 
+        percent_sca = quad(chi_sq_pdf, 0, sel_chi_sq_sca, args=(60))[0]    
+    except:
+        print "**********Could not calculate percentage confidence at the location with scaling!********************"
+        percent_sca = 0
     fig = plt.figure()
 
     plt.suptitle(r"$\chi^2$ plots for "+grb_name+"; Left: Without scaling, Right: With scaling")
