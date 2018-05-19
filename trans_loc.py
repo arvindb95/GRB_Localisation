@@ -701,6 +701,8 @@ def inject_grb(inject_theta,inject_phi,evt_file,grbdir,grid_dir,pre_tstart,pre_t
     
     norm = calc_norm(fluence, emin, emax, t_src, alpha, beta, E0,typ)
 
+    #grid_dir = "/home/arvind/Arvind/CZTIMassModel_tests/Localisation_test/injected_grb_plots/random_injected_grbs/randomgrbs"
+
     sim_flat,sim_dph,badpix_mask,sim_err_dph = simulated_dph(grbdir,grid_dir,inject_theta,inject_phi,typ,t_src,alpha,beta,E0,norm)
     #print "######################## Sim Dph less than zero ##########################"
     #print np.where(sim_dph < 0)
@@ -962,7 +964,7 @@ def calc_chi_sq(tab_filename,pdf_file,grb_name,grbdir,grid_dir,sel_theta_arr,sel
         
     table_file = open(tab_filename,"w")
     loc_table = Table([np.around(sel_theta_arr,2),np.around(sel_phi_arr,decimals=2),np.around(chi_sq_wo_sca_arr,decimals=2),np.around(scaling_arr,decimals=2),np.around(intercept_arr,decimals=2),np.around(chi_sq_sca_arr,decimals=2)],names=['theta','phi','chi_sq_wo_sca','scaling','intercept','chi_sq_sca'])
-    loc_table.write(tab_filename,format="ascii",overwrite=True)
+    loc_table.write(tab_filename,format="ascii")#,overwrite=True)
     table_file.close()
 
     
@@ -1107,23 +1109,22 @@ def plot_grid_dph(pdf_file,grb_name,trans_theta,trans_phi,sel_theta_arr,sel_phi_
     fig = plt.figure()
     plt.style.use("default")
     
-    ax_sca = search_radius/4.0
+    ax_sca = search_radius/7.5
 
     grid_map = Basemap(projection="ortho",llcrnrx=-ax_sca*search_radius*10**5,llcrnry=-ax_sca*search_radius*10**5,urcrnrx=ax_sca*search_radius*10**5,urcrnry=ax_sca*search_radius*10**5, lat_0=90-trans_theta,lon_0=trans_phi)
     
     x_trans, y_trans = grid_map(trans_phi, 90-trans_theta)
-    grid_map.plot(x_trans,y_trans,"k+")
-    plt.text(x_trans,y_trans,grb_name)
+    #plt.text(x_trans,y_trans,grb_name)
     ax1 = fig.add_subplot(111)
     for i in range(len(sel_theta_arr)): 
         this_x, this_y = grid_map(sel_phi_arr[i], 90 - sel_theta_arr[i])
-        imscatter(this_x, this_y, get_sample_data("/home/czti/transient_localisation/13_grb_locatalisation/plots/T{t:06.2f}_P{p:06.2f}.png".format(t=sel_theta_arr[i],p=sel_phi_arr[i])),ax=ax1,zoom=0.09)
+        imscatter(this_x, this_y, get_sample_data("/home/arvind/Arvind/transient_localisation/GRB_Localisation/plots/T{t:06.2f}_P{p:06.2f}.png".format(t=sel_theta_arr[i],p=sel_phi_arr[i])),ax=ax1,zoom=0.08)
 
     x_neigh, y_neigh = grid_map(sel_phi_arr, 90 - sel_theta_arr)
     grid_map.plot(x_neigh, y_neigh, "C0o")
-                
-    grid_map.drawparallels(np.arange(-90,90,30), labels=[1,1,0,0],labelstyle="+/-")
-    grid_map.drawmeridians(np.arange(0,360,30), labels=[0,0,1,1],labelstyle="+/-")
+    grid_map.plot(x_trans,y_trans,"w+")
+    grid_map.drawparallels(np.arange(-90,90,5), labels=[1,1,0,0],labelstyle="+/-")
+    grid_map.drawmeridians(np.arange(0,360,10), labels=[0,0,1,1],labelstyle="+/-")
     plt.title("The simulation grid for "+grb_name+ " (r = {r:0.1f})".format(r=search_radius), y=1.05)
     
     fig.set_size_inches([6.5,6.5])
@@ -1154,13 +1155,13 @@ def plot_grid(pdf_file,grb_name,trans_theta,trans_phi,sel_theta_arr,sel_phi_arr,
     grid_map = Basemap(projection="ortho",llcrnrx=-ax_sca*search_radius*10**5,llcrnry=-ax_sca*search_radius*10**5,urcrnrx=ax_sca*search_radius*10**5,urcrnry=ax_sca*search_radius*10**5, lat_0=90-trans_theta,lon_0=trans_phi)
 
     x_trans, y_trans = grid_map(trans_phi, 90-trans_theta)
-    grid_map.plot(x_trans,y_trans,"k+")
-    plt.text(x_trans,y_trans,grb_name)
+    #plt.text(x_trans,y_trans,grb_name)
 
     x_neigh, y_neigh = grid_map(sel_phi_arr, 90 - sel_theta_arr)
     grid_map.plot(x_neigh, y_neigh, "C0o")
-    grid_map.drawparallels(np.arange(-90,90,30), labels=[1,1,0,0],labelstyle="+/-")
-    grid_map.drawmeridians(np.arange(0,360,30), labels=[0,0,1,1],labelstyle="+/-")
+    grid_map.plot(x_trans,y_trans,"k+")
+    grid_map.drawparallels(np.arange(-90,90,5), labels=[1,1,0,0],labelstyle="+/-")
+    grid_map.drawmeridians(np.arange(0,360,10), labels=[0,0,1,1],labelstyle="+/-")
     plt.title("The simulation grid for "+grb_name+ " (r = {r:0.1f})".format(r=search_radius),y = 1.05)
 
     fig.set_size_inches([6.5,6.5])
@@ -1316,7 +1317,7 @@ def plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,pix_theta,pix_phi,s
         print "**********Could not calculate percentage confidence at the location with scaling!********************"
         percent_sca = 0
     fig = plt.figure()
-
+    plt.style.use("dark_background")
     plt.suptitle(r"$\chi^2$ plots for "+grb_name+"; Left: Without scaling, Right: With scaling")
 
     X = np.linspace(sel_phi_arr.min(),sel_phi_arr.max(),100)
@@ -1338,7 +1339,7 @@ def plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,pix_theta,pix_phi,s
     print np.nanmin(Z2)
     print "#########################################################################"
     
-    ax_sca = search_radius/5.0 # Variable to define the region to be plotted
+    ax_sca = search_radius/20.0 # Variable to define the region to be plotted
             
     ax3 = fig.add_subplot(221)
     map = Basemap(projection="ortho",llcrnrx=-ax_sca*search_radius*10**5,llcrnry=-ax_sca*search_radius*10**5,urcrnrx=ax_sca*search_radius*10**5,urcrnry=ax_sca*search_radius*10**5, lat_0=90-trans_theta,lon_0=trans_phi)
@@ -1346,12 +1347,12 @@ def plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,pix_theta,pix_phi,s
     map.contour(map_Xi,map_Yi,Z1,[np.nanmin(Z1)+1*sca_1,np.nanmin(Z1)+2*sca_1,np.nanmin(Z1)+3*sca_1],colors=["C0","C1","C2"],linewidths=0.75)
     x_trans, y_trans = map(trans_phi, 90-trans_theta)
     grb = map.plot(x_trans,y_trans,"k+")
-    plt.text(x_trans,y_trans,r"{n:0.1f}$\sigma$".format(n=n_sigma_wo_sca))
+    #plt.text(x_trans,y_trans,r"{n:0.1f}$\sigma$".format(n=n_sigma_wo_sca))
     sigma_1_area = get_contour_area(X,Y,Z1,np.nanmin(Z1)+1*sca_1)
     sigma_2_area = get_contour_area(X,Y,Z1,np.nanmin(Z1)+2*sca_1)
     sigma_3_area = get_contour_area(X,Y,Z1,np.nanmin(Z1)+3*sca_1)
     map.drawmeridians(np.arange(0,360,30), labels=[0,0,1,0],labelstyle="+/-") 
-    map.drawparallels(np.arange(-90,90,30), labels=[1,0,0,0],labelstyle="+/-")
+    map.drawparallels(np.arange(-90,90,15), labels=[1,0,0,0],labelstyle="+/-")
 
     line1= pl.Line2D(range(10), range(10), marker='None', linestyle='-',linewidth=0.75, color="C0")
     line2= pl.Line2D(range(10), range(10), marker='None', linestyle='-',linewidth=0.75, color="C1")
@@ -1364,12 +1365,12 @@ def plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,pix_theta,pix_phi,s
     map.contour(map_Xi,map_Yi,Z2,[np.nanmin(Z2)+1*sca_2,np.nanmin(Z2)+2*sca_2,np.nanmin(Z2)+3*sca_2],colors=["C0","C1","C2"],linewidths=0.75)
     x_trans, y_trans = map(trans_phi, 90-trans_theta)
     grb = map.plot(x_trans,y_trans,"k+")
-    plt.text(x_trans,y_trans,r"{n:0.1f}$\sigma$".format(n=n_sigma_sca))
+    #plt.text(x_trans,y_trans,r"{n:0.1f}$\sigma$".format(n=n_sigma_sca))
     sigma_1_area_sca = get_contour_area(X,Y,Z2,np.nanmin(Z2)+1*sca_2)
     sigma_2_area_sca = get_contour_area(X,Y,Z2,np.nanmin(Z2)+2*sca_2)
     sigma_3_area_sca = get_contour_area(X,Y,Z2,np.nanmin(Z2)+3*sca_2)
-    map.drawmeridians(np.arange(0,360,30), labels=[0,0,1,],labelstyle="+/-") 
-    map.drawparallels(np.arange(-90,90,30), labels=[0,1,0,0],labelstyle="+/-")
+    map.drawmeridians(np.arange(0,360,30), labels=[0,0,1,0],labelstyle="+/-") 
+    map.drawparallels(np.arange(-90,90,15), labels=[0,1,0,0],labelstyle="+/-")
 
     line1= pl.Line2D(range(10), range(10), marker='None', linestyle='-',linewidth=0.75, color="C0")
     line2= pl.Line2D(range(10), range(10), marker='None', linestyle='-',linewidth=0.75, color="C1")
@@ -1382,11 +1383,11 @@ def plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,pix_theta,pix_phi,s
     map.contour(map_Xi,map_Yi,Z1,[76.630*sca_1,90.802*sca_1],colors=["C0","C1"],linewidths=0.75)
     x_trans, y_trans = map(trans_phi, 90-trans_theta)
     map.plot(x_trans,y_trans,"k+")
-    plt.text(x_trans,y_trans,"{p:0.1f}%".format(p=percent_wo_sca))
+    #plt.text(x_trans,y_trans,"{p:0.1f}%".format(p=percent_wo_sca))
     percent_90_area = get_contour_area(X,Y,Z1,76.630*sca_1)
     percent_99_area = get_contour_area(X,Y,Z1,90.802*sca_1)
     map.drawmeridians(np.arange(0,360,30), labels=[0,0,0,1],labelstyle="+/-")
-    map.drawparallels(np.arange(-90,90,30), labels=[1,0,0,0],labelstyle="+/-")
+    map.drawparallels(np.arange(-90,90,15), labels=[1,0,0,0],labelstyle="+/-")
 
     line1= pl.Line2D(range(10), range(10), marker='None', linestyle='-',linewidth=0.75, color="C0")
     line2= pl.Line2D(range(10), range(10), marker='None', linestyle='-',linewidth=0.75, color="C1")
@@ -1395,30 +1396,30 @@ def plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,pix_theta,pix_phi,s
     ax2 = fig.add_subplot(224) 
     map = Basemap(projection="ortho",llcrnrx=-ax_sca*search_radius*10**5,llcrnry=-ax_sca*search_radius*10**5,urcrnrx=ax_sca*search_radius*10**5,urcrnry=ax_sca*search_radius*10**5, lat_0=90-trans_theta,lon_0=trans_phi)
     map_Xi, map_Yi = map(Xi,Yi)
-    map.contour(map_Xi,map_Yi,Z2,[74.397*sca_2,88.379*sca_2],colors=["C0","C1"],linewidths=0.75)
+    map.contourf(map_Xi,map_Yi,Z2,[60.0,74.397*sca_2,88.379*sca_2],colors=["yellow","darkgoldenrod"],linewidths=0.75)
     x_trans, y_trans = map(trans_phi, 90-trans_theta)
     grb = map.plot(x_trans,y_trans,"k+")
-    plt.text(x_trans,y_trans,"{p:0.1f}%".format(p=percent_sca))
+    #plt.text(x_trans,y_trans,"{p:0.1f}%".format(p=percent_sca))
     percent_90_area_sca = get_contour_area(X,Y,Z2,74.397*sca_2)
     percent_99_area_sca = get_contour_area(X,Y,Z2,88.379*sca_2)
     def setcolor(x, color):
         for m in x:
             for t in x[m][1]:
                 t.set_color(color)
-    mer = map.drawmeridians(np.arange(0,360,30), labels=[0,0,1,1],labelstyle="+/-") 
-    par = map.drawparallels(np.arange(-90,90,30), labels=[1,1,0,0],labelstyle="+/-")
-    #setcolor(mer,"w")
-    #setcolor(par,"w")
+    mer = map.drawmeridians(np.arange(0,360,10),color="white", labels=[0,0,0,1],labelstyle="+/-") 
+    par = map.drawparallels(np.arange(-90,90,5),color="white", labels=[0,1,0,0],labelstyle="+/-")
+    setcolor(mer,"w")
+    setcolor(par,"w")
 
     line1= pl.Line2D(range(10), range(10), marker='None', linestyle='-',linewidth=0.75, color="C0")
     line2= pl.Line2D(range(10), range(10), marker='None', linestyle='-',linewidth=0.75, color="C1")
     
     import matplotlib.patches as mpatches  
 
-    #yellow_patch = mpatches.Patch(color="yellow")
-    #orange_patch = mpatches.Patch(color="darkgoldenrod")
+    yellow_patch = mpatches.Patch(color="yellow")
+    orange_patch = mpatches.Patch(color="darkgoldenrod")
 
-    ax2.legend(("k+",line1,line2),(grb_name,r"90 % area={a:0.2f} deg$^{{2}}$".format(a=percent_90_area_sca),r"99 % area={a:0.2f} deg$^{{2}}$".format(a=percent_99_area_sca)),numpoints=1,loc="lower right",prop={'size':6})
+    ax2.legend(("k+",yellow_patch,orange_patch),(grb_name,r"90 % area={a:0.2f} deg$^{{2}}$".format(a=percent_90_area_sca),r"99 % area={a:0.2f} deg$^{{2}}$".format(a=percent_99_area_sca)),numpoints=1,loc="lower right",prop={'size':6})
     
     fig.set_size_inches([6.5,6.5])
     pdf_file.savefig(fig)
@@ -1480,7 +1481,7 @@ if __name__ == "__main__":
     
     path_to_plotfile = plotfile.split("/")[0]
     
-    grid_dir = "/mnt/nas_czti/massmodelgrid"
+    grid_dir = "/media/arvind/Elements/5th_Year_Project/massmodelgrid"
     depth = 4 # For now hard coded this. Let's see if we can make this better later
     
     pdf_file = PdfPages(plotfile)
@@ -1521,16 +1522,21 @@ if __name__ == "__main__":
 ###    print inj_phis
 ###
 ###    inj_tab = Table([inj_thetas,inj_phis],names=["inj_theta","inj_phi"])
+###    inj_th_ph_tab = Table.read("inj_theta_phi_tab.txt",format="ascii")
+###    inj_thetas = inj_th_ph_tab["inj_theta"]
+###    inj_phis = inj_th_ph_tab["inj_phi"]
 ###
+###    inj_thetas = np.array([39.16])
+###    inj_phis = np.array([153.40])
 ###    run_inj_grb_file = open("run_injected_test.sh","w")
 ###    run_inj_grb_file.write("#!/bin/sh"+"\n")
-###    inj_dir="/mnt/nas_czti/individual/arvind/Data/injected_GRB_data"
-###    data_dir="/mnt/nas_czti/individual/arvind/Data/old_data/GRBinjected"
+###    inj_dir="/home/arvind/Arvind/CZTIMassModel_tests/Localisation_test/for_thesis"
+###    data_dir="/home/arvind/Arvind/CZTIMassModel_tests/Localisation_test/injected_grb_plots/GRBinjected"
 ###    for i in range(len(inj_thetas)):
 ###        conf_file = gen_inj_conf(data_dir,inj_dir,inj_thetas[i],inj_phis[i],fluence,emin,emax,alpha,beta,E0,typ,223271800,1,223271000,223271200,223272000,223272200)
 ###	run_inj_grb_file.write("python trans_loc.py "+conf_file+" 10 --do_inject_grb True"+"\n")
 ###    run_inj_grb_file.close()
-###    inj_tab.write(inj_dir+"/inj_theta_phi.txt",format="ascii")
+####    inj_tab.write(inj_dir+"/inj_theta_phi.txt",format="ascii")
   
     # Converting the (RA,DEC) coordinates to (theta,phi).
     if (args.do_inject_grb==False):
@@ -1547,7 +1553,7 @@ if __name__ == "__main__":
     
     sel_theta_arr, sel_phi_arr = get_neighbours(pix_theta,pix_phi,theta_arr,phi_arr,sep_angle=args.radius)
     
-    grid_sel_theta_arr, grid_sel_phi_arr = get_neighbours(pix_theta,pix_phi,theta_arr,phi_arr,sep_angle=5.0)
+    grid_sel_theta_arr, grid_sel_phi_arr = get_neighbours(pix_theta,pix_phi,theta_arr,phi_arr,sep_angle=10.0)
  
     print "The theta's of the selected pixels : ",sel_theta_arr
     print "The phi's of the selected pixels : ",sel_phi_arr
@@ -1556,19 +1562,19 @@ if __name__ == "__main__":
 
     plot_lc(grb_name,infile,trans_theta,trans_phi,grb_tstart,grb_tend,pre_tstart,pre_tend,post_tstart,post_tend,pdf_file)
 
-   ##################### Plotting all sim dphs at the selected points ###############################
-    if (args.do_inject_grb==False):
-        plot_sim_dph_png(grbdir,grid_dir,grid_sel_theta_arr,grid_sel_phi_arr,typ,t_src,alpha,beta,E0,A)
-    else :
-        t_src = 1.0
-        plot_sim_dph_png(grbdir,grid_dir,grid_sel_theta_arr,grid_sel_phi_arr,typ,t_src,alpha,beta,E0,A)
-
-   ##################################################################################################
+#   ##################### Plotting all sim dphs at the selected points ###############################
+#    if (args.do_inject_grb==False):
+#        plot_sim_dph_png(grbdir,grid_dir,grid_sel_theta_arr,grid_sel_phi_arr,typ,t_src,alpha,beta,E0,A)
+#    else :
+#        t_src = 1.0
+#        plot_sim_dph_png(grbdir,grid_dir,grid_sel_theta_arr,grid_sel_phi_arr,typ,t_src,alpha,beta,E0,A)
+#
+#   ##################################################################################################
 
     # Plotting the grid points around the known position of the transient
 
-    plot_grid_dph(pdf_file,grb_name,pix_theta,pix_phi,grid_sel_theta_arr,grid_sel_phi_arr,5.0)
-    plot_grid(pdf_file,grb_name,pix_theta,pix_phi,sel_theta_arr,sel_phi_arr,args.radius)
+#    plot_grid_dph(pdf_file,grb_name,trans_theta,trans_phi,grid_sel_theta_arr,grid_sel_phi_arr,10.0)
+#    plot_grid(pdf_file,grb_name,trans_theta,trans_phi,sel_theta_arr,sel_phi_arr,args.radius)
     
     # Now we have all the points. So, we can move on to calculating the dphs for all these points
     print "========================================================================================"
