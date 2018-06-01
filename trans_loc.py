@@ -31,6 +31,7 @@ from scipy.interpolate import griddata
 from matplotlib import cm
 import pylab as pl
 from mpl_toolkits.basemap import Basemap
+import matplotlib as mpl
 import os
 import random
 
@@ -1172,7 +1173,7 @@ def plot_grid(pdf_file,grb_name,trans_theta,trans_phi,sel_theta_arr,sel_phi_arr,
 
 ####################################################################################################
 
-def plot_binned_dph(fig,ax,ax_title,image,pixbin):
+def plot_binned_dph(fig,ax,ax_title,image,pixbin,colormap):
     """
     Plots a dph of a given binning
     
@@ -1184,7 +1185,7 @@ def plot_binned_dph(fig,ax,ax_title,image,pixbin):
     pixbin = the resampling bin size 
     """
  
-    im = ax.imshow(resample(image,pixbin),interpolation='none')
+    im = ax.imshow(resample(image,pixbin),cmap=colormap, interpolation='none')
     ax.set_title(ax_title,fontsize=8)
     ax.set_xlim(-1,128/pixbin - 0.5)
     ax.axvline(x=-0.75,ymin=0,ymax=64,linewidth=5,color='k')
@@ -1192,7 +1193,7 @@ def plot_binned_dph(fig,ax,ax_title,image,pixbin):
     ax.set_yticklabels([])
     ax.xaxis.set_ticks(np.arange(0,128/pixbin,16/pixbin))
     ax.set_xticklabels(np.arange(0,128,16))
-    cb = fig.colorbar(im,ax=ax,fraction=0.046, pad=0.04)
+    cb = fig.colorbar(im,ax=ax,cmap=colormap, fraction=0.046, pad=0.04)
     cb.ax.tick_params(labelsize=8)
 
     return 0
@@ -1234,13 +1235,13 @@ def plot_sim_data_dphs(pdf_file,grb_name,trans_theta,trans_phi,pix_theta,pix_phi
     plt.suptitle('DPHs after badpix correction for '+grb_name + r" $\theta_{{grb}}$={tg:0.1f} and $\phi_{{grb}}$={pg:0.1f}".format(tg=trans_theta,pg=trans_phi)+"\n"+r"Pixel (for simulated dph) : $\theta$={t:0.1f} and $\phi$={p:0.1f}i".format(t=pix_theta,p=pix_phi)+"\n"+r"Total counts (observed)={c:0.2f} and (predicted)={c2:0.2f}".format(c=total_obs_counts,c2=total_sim_counts))
             
             # Source + Background	
-    plot_binned_dph(f,ax1,"Src + Bkgd DPH",grb_dph_corr,pixbin)
+    plot_binned_dph(f,ax1,"Src + Bkgd DPH",grb_dph_corr,pixbin,cm.viridis)
             # Background
-    plot_binned_dph(f,ax2,"Bkgd DPH",bkgd_dph_corr,pixbin) 
+    plot_binned_dph(f,ax2,"Bkgd DPH",bkgd_dph_corr,pixbin,cm.viridis) 
             # Sim
-    plot_binned_dph(f,ax3,"Sim DPH",sim_dph_corr,pixbin)
+    plot_binned_dph(f,ax3,"Sim DPH",sim_dph_corr,pixbin,cm.viridis)
             # Source 
-    plot_binned_dph(f,ax4,"Src DPH (bkgd subtracted)",src_dph_corr,pixbin)
+    plot_binned_dph(f,ax4,"Src DPH (bkgd subtracted)",src_dph_corr,pixbin,cm.viridis)
 
     f.set_size_inches([6.5,6.5])
     pdf_file.savefig(f)  # saves the current figure into a pdf_file page
@@ -1317,7 +1318,7 @@ def plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,pix_theta,pix_phi,s
         print "**********Could not calculate percentage confidence at the location with scaling!********************"
         percent_sca = 0
     fig = plt.figure()
-    plt.style.use("dark_background")
+#    plt.style.use("dark_background")
     plt.suptitle(r"$\chi^2$ plots for "+grb_name+"; Left: Without scaling, Right: With scaling")
 
     X = np.linspace(sel_phi_arr.min(),sel_phi_arr.max(),100)
@@ -1339,7 +1340,7 @@ def plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,pix_theta,pix_phi,s
     print np.nanmin(Z2)
     print "#########################################################################"
     
-    ax_sca = search_radius/20.0 # Variable to define the region to be plotted
+    ax_sca = search_radius/10.0 # Variable to define the region to be plotted
             
     ax3 = fig.add_subplot(221)
     map = Basemap(projection="ortho",llcrnrx=-ax_sca*search_radius*10**5,llcrnry=-ax_sca*search_radius*10**5,urcrnrx=ax_sca*search_radius*10**5,urcrnry=ax_sca*search_radius*10**5, lat_0=90-trans_theta,lon_0=trans_phi)
@@ -1425,6 +1426,46 @@ def plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,pix_theta,pix_phi,s
     pdf_file.savefig(fig)
   
     return sigma_1_area,sigma_2_area,sigma_3_area,percent_90_area,percent_99_area,sigma_1_area_sca,sigma_2_area_sca,sigma_3_area_sca,percent_90_area_sca,percent_99_area_sca,n_sigma_wo_sca,n_sigma_sca,percent_wo_sca,percent_sca
+
+def manual_flag_badpix(pdf_file,grb_name,trans_theta,trans_phi,pix_theta,pix_phi,sim_dph,grb_dph,bkgd_dph,badpix_mask,t_src,t_tot,pixbin):
+    """
+    Flags badpixels (pixels with very high counts compared to its neighbours) from the observed data DPH
+    after the default flagging by the pipeline.
+
+    Inputs:
+    pdf_file = file in which the output is to be written
+    grb_name = name of grb
+    trans_theta = theta of transient (deg)
+    trans_phi = phi of transient (deg)
+    pix_theta = theta coordinate of center of the pixel containing the transient (deg)
+    pix_phi = phi coordinate of the center of the pixel containing the transient (deg)
+    sim_dph = dph from simulation at (pix_theta,pix_phi)
+    grb_dph = dph of src + bkgd 
+    bkgd_dph = only bkgd
+    badpix_mask = badpix_mask to be multiplied 
+    t_src = duration of the burst (t90) (s)
+    t_tot = total background time to consider (s)
+    pixbin = binsize to resample the dphs 
+ 
+    Returns:
+    saves a figure containing the default badpix mask and the new, manually flagged badpix mask
+    """
+    
+    f = plt.figure()
+    ax1 = f.add_subplot(121)
+    ax2 = f.add_subplot(122)
+
+    def_badpix_mask = badpix_mask*np.nan
+    def_badpix_mask[np.where(badpix_mask==0)[0],np.where(badpix_mask==0)[1]] = 1
+
+    plot_binned_dph(f,ax1,"Default badpix mask generated from pipeline",def_badpix_mask,1,cm.RdBu)
+
+    plot_binned_dph(f,ax2,"Manually flagged badpix mask",badpix_mask,1,cm.RdBu)
+
+    f.set_size_inches([6.5,6.5])
+    pdf_file.savefig(f)  # saves the current figure into a pdf_file page
+    return 0
+
 
 ##################################### Main function begins #########################################
 
@@ -1597,34 +1638,38 @@ if __name__ == "__main__":
     
     print "========================================================================================"
 
+    # Plotting badpix masks (default and manual)
+
+    manual_flag_badpix(pdf_file,grb_name,trans_theta,trans_phi,pix_theta,pix_phi,sim_dph,grb_dph,bkgd_dph,badpix_mask,t_src,t_tot,pixbin)
+
     # Joint fit 
-    if (args.do_joint_fit==True):
-
-    	make_joint_table(joint_tab_file,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,alpha,beta,E0,A)
-
-    # Calculating chi_sq before and after scaling
-    
-    chi_sq_wo_sca_arr, chi_sq_sca_arr = calc_chi_sq(loc_txt_file,pdf_file,grb_name,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,args.do_joint_fit,joint_tab_file,alpha,beta,E0,A)
-    
-
-    print "========================================================================================"
-
-
-    # Plotting the contour plots (The data is read out from the files)
-    
-    tab = Table.read(loc_txt_file,format='ascii')
-
-    chi_sq_wo_sca_arr = tab['chi_sq_wo_sca'].data
-    chi_sq_sca_arr = tab['chi_sq_sca'].data
-    scaling_arr = tab['scaling'].data
-    intercept_arr = tab['intercept'].data
-
-    s_1_ar,s_2_ar,s_3_ar,per_90_ar,per_99_ar,s_1_ar_sca,s_2_ar_sca,s_3_ar_sca,per_90_ar_sca,per_99_ar_sca,n_sigma_wo_sca,n_sigma_sca,percent_wo_sca,percent_sca = plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,pix_theta,pix_phi,sel_theta_arr,sel_phi_arr,chi_sq_wo_sca_arr,chi_sq_sca_arr,args.radius)
-    
-    area_table = Table([[s_1_ar],[s_2_ar],[s_3_ar],[per_90_ar],[per_99_ar],[s_1_ar_sca],[s_2_ar_sca],[s_3_ar_sca],[per_90_ar_sca],[per_99_ar_sca],[n_sigma_wo_sca],[n_sigma_sca],[percent_wo_sca],[percent_sca]], names=["s_1_ar","s_2_ar","s_3_ar","per_90_ar","per_99_ar","s_1_ar_sca","s_2_ar_sca","s_3_ar_sca","per_90_ar_sca","per_99_ar_sca","n_sigma_wo_sca","n_sigma_sca","percent_wo_sca","percent_sca"])
-    area_table.write(area_txt_file,format="ascii")
-  
-    t1 = time.time()
-
-    t_final = t1-t0
-    print "Time taken for the code to run (s) : ",t_final
+#    if (args.do_joint_fit==True):
+#
+#    	make_joint_table(joint_tab_file,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,alpha,beta,E0,A)
+#
+#    # Calculating chi_sq before and after scaling
+#    
+#    chi_sq_wo_sca_arr, chi_sq_sca_arr = calc_chi_sq(loc_txt_file,pdf_file,grb_name,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,args.do_joint_fit,joint_tab_file,alpha,beta,E0,A)
+#    
+#
+#    print "========================================================================================"
+#
+#
+#    # Plotting the contour plots (The data is read out from the files)
+#    
+#    tab = Table.read(loc_txt_file,format='ascii')
+#
+#    chi_sq_wo_sca_arr = tab['chi_sq_wo_sca'].data
+#    chi_sq_sca_arr = tab['chi_sq_sca'].data
+#    scaling_arr = tab['scaling'].data
+#    intercept_arr = tab['intercept'].data
+#
+#    s_1_ar,s_2_ar,s_3_ar,per_90_ar,per_99_ar,s_1_ar_sca,s_2_ar_sca,s_3_ar_sca,per_90_ar_sca,per_99_ar_sca,n_sigma_wo_sca,n_sigma_sca,percent_wo_sca,percent_sca = plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,pix_theta,pix_phi,sel_theta_arr,sel_phi_arr,chi_sq_wo_sca_arr,chi_sq_sca_arr,args.radius)
+#    
+#    area_table = Table([[s_1_ar],[s_2_ar],[s_3_ar],[per_90_ar],[per_99_ar],[s_1_ar_sca],[s_2_ar_sca],[s_3_ar_sca],[per_90_ar_sca],[per_99_ar_sca],[n_sigma_wo_sca],[n_sigma_sca],[percent_wo_sca],[percent_sca]], names=["s_1_ar","s_2_ar","s_3_ar","per_90_ar","per_99_ar","s_1_ar_sca","s_2_ar_sca","s_3_ar_sca","per_90_ar_sca","per_99_ar_sca","n_sigma_wo_sca","n_sigma_sca","percent_wo_sca","percent_sca"])
+#    area_table.write(area_txt_file,format="ascii")
+#  
+#    t1 = time.time()
+#
+#    t_final = t1-t0
+#    print "Time taken for the code to run (s) : ",t_final
