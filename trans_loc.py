@@ -1427,7 +1427,7 @@ def plot_loc_contour(grb_name,pdf_file,trans_theta,trans_phi,pix_theta,pix_phi,s
   
     return sigma_1_area,sigma_2_area,sigma_3_area,percent_90_area,percent_99_area,sigma_1_area_sca,sigma_2_area_sca,sigma_3_area_sca,percent_90_area_sca,percent_99_area_sca,n_sigma_wo_sca,n_sigma_sca,percent_wo_sca,percent_sca
 
-def manual_flag_badpix(pdf_file,grb_name,trans_theta,trans_phi,pix_theta,pix_phi,sim_dph,grb_dph,bkgd_dph,badpix_mask,t_src,t_tot,pixbin):
+def manual_flag_badpix(pdf_file,grb_name,src_dph,badpix_mask):
     """
     Flags badpixels (pixels with very high counts compared to its neighbours) from the observed data DPH
     after the default flagging by the pipeline.
@@ -1450,17 +1450,51 @@ def manual_flag_badpix(pdf_file,grb_name,trans_theta,trans_phi,pix_theta,pix_phi
     Returns:
     saves a figure containing the default badpix mask and the new, manually flagged badpix mask
     """
-    
+   
+    cutoff_scale = 20
+
     f = plt.figure()
-    ax1 = f.add_subplot(121)
-    ax2 = f.add_subplot(122)
+    ax1 = f.add_subplot(221)
+    ax2 = f.add_subplot(222)
+    ax3 = f.add_subplot(223)
+    ax4 = f.add_subplot(224)
 
-    def_badpix_mask = badpix_mask*np.nan
-    def_badpix_mask[np.where(badpix_mask==0)[0],np.where(badpix_mask==0)[1]] = 1
+    plt.suptitle("Badpix masks for "+ grb_name)
+    def_badpix_mask = badpix_mask*0.5
+    mod_badpix_mask_plot = badpix_mask*0.5
+    mod_badpix_mask = badpix_mask
 
-    plot_binned_dph(f,ax1,"Default badpix mask generated from pipeline",def_badpix_mask,1,cm.RdBu)
+    src_dph_def = src_dph*badpix_mask
 
-    plot_binned_dph(f,ax2,"Manually flagged badpix mask",badpix_mask,1,cm.RdBu)
+    avg_counts = (src_dph_def.sum())/(np.shape(src_dph_def)[0]*np.shape(src_dph_def)[1])
+    print "Average counts in detected DPH : ",avg_counts
+    print "Maximum count registered : ",src_dph_def.max()
+    sel_row, sel_col = np.where(src_dph_def > cutoff_scale*avg_counts)
+    mod_badpix_mask_plot[sel_row,sel_col] = 1.0
+    mod_badpix_mask[sel_row,sel_col] = 1.0
+
+    src_dph_mod = src_dph*mod_badpix_mask
+
+    im = ax1.imshow(resample(def_badpix_mask,1),cmap=cm.seismic,vmin=0,vmax=1, interpolation='none')
+    ax1.set_title("Default badpix mask generated from pipeline",fontsize=8)
+    ax1.set_xlim(-1,128/1 - 0.5)
+    ax1.axvline(x=-0.75,ymin=0,ymax=64,linewidth=5,color='k')
+    ax1.spines['left'].set_position(('data',-0.5))
+    ax1.set_yticklabels([])
+    ax1.xaxis.set_ticks(np.arange(0,128/1,16/1))
+    ax1.set_xticklabels(np.arange(0,128,16))
+
+    im2 = ax2.imshow(resample(mod_badpix_mask_plot,1),cmap=cm.seismic,vmin=0,vmax=1, interpolation='none')
+    ax2.set_title("Badpix mask generated after flagging manually",fontsize=8)
+    ax2.set_xlim(-1,128/1 - 0.5)
+    ax2.axvline(x=-0.75,ymin=0,ymax=64,linewidth=5,color='k')
+    ax2.spines['left'].set_position(('data',-0.5))
+    ax2.set_yticklabels([])
+    ax2.xaxis.set_ticks(np.arange(0,128/1,16/1))
+    ax2.set_xticklabels(np.arange(0,128,16))
+
+    plot_binned_dph(f,ax3,"Detected DPH after default flagging",src_dph_def,1,cm.viridis)
+    plot_binned_dph(f,ax4,"Detected DPH after manual flagging",src_dph_mod,1,cm.viridis)
 
     f.set_size_inches([6.5,6.5])
     pdf_file.savefig(f)  # saves the current figure into a pdf_file page
@@ -1631,7 +1665,7 @@ if __name__ == "__main__":
         src_dph, bkgd_dph, grb_dph, A = inject_grb(trans_theta,trans_phi,infile,grbdir,grid_dir,pre_tstart,pre_tend,post_tstart,post_tend,t_src,typ,alpha,beta,E0,fluence,emin,emax)
     
     sim_flat,sim_dph,badpix_mask,sim_err_dph = simulated_dph(grbdir,grid_dir,pix_theta,pix_phi,typ,t_src,alpha,beta,E0,A)
-    
+      
     # Plotting the badpix corrected dphs 
     
     plot_sim_data_dphs(pdf_file,grb_name,trans_theta,trans_phi,pix_theta,pix_phi,sim_dph,grb_dph,bkgd_dph,badpix_mask,t_src,t_tot,pixbin)
@@ -1640,7 +1674,7 @@ if __name__ == "__main__":
 
     # Plotting badpix masks (default and manual)
 
-    manual_flag_badpix(pdf_file,grb_name,trans_theta,trans_phi,pix_theta,pix_phi,sim_dph,grb_dph,bkgd_dph,badpix_mask,t_src,t_tot,pixbin)
+    manual_flag_badpix(pdf_file,grb_name,src_dph,badpix_mask)
 
     # Joint fit 
 #    if (args.do_joint_fit==True):
