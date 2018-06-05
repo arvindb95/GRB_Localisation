@@ -1471,7 +1471,7 @@ def manual_flag_badpix(pdf_file,grb_name,src_dph,badpix_mask):
     print "Maximum count registered : ",src_dph_def.max()
     sel_row, sel_col = np.where(src_dph_def > cutoff_scale*avg_counts)
     mod_badpix_mask_plot[sel_row,sel_col] = 1.0
-    mod_badpix_mask[sel_row,sel_col] = 1.0
+    mod_badpix_mask[sel_row,sel_col] = 0.0
 
     src_dph_mod = src_dph*mod_badpix_mask
 
