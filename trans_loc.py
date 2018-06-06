@@ -322,32 +322,36 @@ def get_angles(mkffile, trigtime, ra_tran, dec_tran, window=10):
 
 # 3. Function to get the coordinates of the center of the trixel in HTM grid in which the transient point falls
 
-def get_center(depth,trans_theta,trans_phi):
+def get_center(grid_theta,grid_phi,trans_theta,trans_phi):
     """
     Takes transient coordinates (trans_theta,trans_phi) and returns the coordinates of the 
-    pixel-center (pix_theta,pix_phi) in which the transient point lies.
+    closest grid point (pix_theta,pix_phi) near which the transient point lies.
 
     Inputs:
-    depth = The depth of the grid 
+    grid_theta = Array of thetas of the points of the grid (deg)
+    grid_phi = Array of phis of the points of the grid (deg)
     trans_theta = theta of transient (deg)
     trans_phi = phi of transient (deg)
 
     Returns:
-    pix_id, pix_theta (deg) and pix_phi (deg)
+    pix_theta (deg) and pix_phi (deg)
     """
 
-    htm_grid = es.htm.HTM(depth=depth)
-    pix_id = htm_grid.lookup_id(90-trans_phi,90-trans_theta)[0]
+    trans_coor = coo.SkyCoord(trans_phi,trans_theta-90,unit="deg")
 
-    v1,v2,v3 = htm_grid.get_vertices(pix_id)
-    center = (v1+v2+v3)/3.0
-    center = center/np.sqrt(center[0]**2.0 + + center[1]**2.0 + center[2]**2.0)
-    pix_theta =  np.rad2deg(np.arccos(center[2]))
-    pix_phi = np.rad2deg(np.arctan2(center[0],center[1]))
-    if (pix_phi < 0):
-        pix_phi = 360.0 + pix_phi
+    sep_arr = []
 
-    return pix_id, pix_theta, pix_phi
+    for i in range(len(theta_arr)):
+        coord = coo.SkyCoord(phi_arr[i],theta_arr[i]-90,unit="deg")
+        sep = abs(trans_coor.separation(coord).value)
+        sep_arr.append(sep)
+ 
+    sel_point = np.where(sep_arr==np.min(sep_arr))
+
+    pix_theta = theta_arr[sel_point][0]
+    pix_phi = phi_arr[sel_point][0]
+
+    return pix_theta, pix_phi
 
 # 4. Function to get pix ids of neighbouring pixels
 
@@ -1575,9 +1579,9 @@ if __name__ == "__main__":
 
    # Reading files containing arrays of theta and phi for the grid
 
-    theta_tab = Table.read("final_theta.txt",format="ascii")
+    theta_tab = Table.read("new_final_theta.txt",format="ascii")
     theta_arr = theta_tab["theta"].data
-    phi_tab = Table.read("final_phi.txt", format="ascii")
+    phi_tab = Table.read("new_final_phi.txt", format="ascii")
     phi_arr = phi_tab["phi"].data    
  
 ###    sort_ind = np.argsort(theta_arr)
@@ -1621,7 +1625,7 @@ if __name__ == "__main__":
         trans_phi = dec_tran
     print "The coordinates of the transient in CZTI frame are : THETA = ",trans_theta,", PHI = ",trans_phi
 
-    pix_id, pix_theta, pix_phi = get_center(depth,trans_theta,trans_phi)
+    pix_theta, pix_phi = get_center(theta_arr,phi_arr,trans_theta,trans_phi)
 
     #print "The pixel in which the transient lies is : ",pix_id,"(for depth = ",depth,")" 
     print "The coordinates of the pixel are : THETA = ",pix_theta,", PHI = ",pix_phi
@@ -1680,16 +1684,16 @@ if __name__ == "__main__":
 #    if (args.do_joint_fit==True):
 #
 #    	make_joint_table(joint_tab_file,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,alpha,beta,E0,A)
-#
-#    # Calculating chi_sq before and after scaling
-#    
-#    chi_sq_wo_sca_arr, chi_sq_sca_arr = calc_chi_sq(loc_txt_file,pdf_file,grb_name,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,args.do_joint_fit,joint_tab_file,alpha,beta,E0,A)
-#    
-#
-#    print "========================================================================================"
-#
-#
-#    # Plotting the contour plots (The data is read out from the files)
+
+    # Calculating chi_sq before and after scaling
+    
+    chi_sq_wo_sca_arr, chi_sq_sca_arr = calc_chi_sq(loc_txt_file,pdf_file,grb_name,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,args.do_joint_fit,joint_tab_file,alpha,beta,E0,A)
+    
+
+    print "========================================================================================"
+
+
+    # Plotting the contour plots (The data is read out from the files)
 #    
 #    tab = Table.read(loc_txt_file,format='ascii')
 #
