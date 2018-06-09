@@ -1706,7 +1706,7 @@ if __name__ == "__main__":
 
     # Calculating chi_sq before and after scaling
     
-#    chi_sq_wo_sca_arr, chi_sq_sca_arr = calc_chi_sq(loc_txt_file,pdf_file,grb_name,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,args.do_joint_fit,joint_tab_file,e_low,e_high,alpha,beta,E0,A)
+    chi_sq_wo_sca_arr, chi_sq_sca_arr = calc_chi_sq(loc_txt_file,pdf_file,grb_name,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,args.do_joint_fit,joint_tab_file,e_low,e_high,alpha,beta,E0,A)
     
 
     print "========================================================================================"
