@@ -461,7 +461,7 @@ def calc_norm(fluence, emin, emax, t_src, alpha=-1.0, beta=-2.5, E_peak=250.0*u.
 
 # 6. Function to calculate the simulated dph
 
-def simulated_dph(grbdir,grid_dir,run_theta,run_phi,typ,t_src,alpha,beta,E0,A):
+def simulated_dph(grbdir,grid_dir,run_theta,run_phi,typ,t_src,alpha,beta,E0,A,e_low,e_high):
     """
     Function that creates simulated dph and badpixmap
     from given simulated data and badpix files respectively.
@@ -473,16 +473,18 @@ def simulated_dph(grbdir,grid_dir,run_theta,run_phi,typ,t_src,alpha,beta,E0,A):
     pix_cnts = np.zeros((16384,len(filenames)))
     err_pix_cnts = np.zeros((16384,len(filenames)))
     en = np.arange(5, 261., .5)
-    sel  = (en>=100) & (en <= 150)
+    sel  = (en>=e_low) & (en <= e_high)
     en_range = np.zeros(len(filenames))
     for f in range(len(filenames)):
         #en_range[f] = filenames[f][-31:-24] Older way. Very clumsy if you change the path!!!
         fits_file = fits.open(filenames[f])
         hdr = fits_file[0].header
         en_range[f] = hdr["ENERGY"]
-    err_100_500 = (100.0 <= en_range.astype(np.float)) & (en_range.astype(np.float) <= 500.0)
+    err_20_100 = (20.0 <= en_range.astype(np.float)) & (en_range.astype(np.float) <= 100.0)
+    err_100_500 = (100.0 < en_range.astype(np.float)) & (en_range.astype(np.float) <= 500.0)
     err_500_1000 = (500.0 < en_range.astype(np.float)) & (en_range.astype(np.float) <= 1000.0)
     err_1000_2000 = (1000.0 < en_range.astype(np.float)) & (en_range.astype(np.float) <= 2000.0)
+    exist_20_100 = np.where(err_20_100 == True)
     exist_1000_2000 = np.where(err_1000_2000 == True)
     E = np.array([])
 
@@ -508,12 +510,19 @@ def simulated_dph(grbdir,grid_dir,run_theta,run_phi,typ,t_src,alpha,beta,E0,A):
     err_100_500_total = np.sqrt((err_pix_cnts[:,err_100_500]**2).sum(1))*(E[err_100_500][1]-E[err_100_500][0])
     err_500_1000_total =  np.sqrt((err_pix_cnts[:,err_500_1000]**2).sum(1))*(E[err_500_1000][1]-E[err_500_1000][0])
 
+    if (len(exist_20_100[0]) != 0):
+        err_20_100_total = np.sqrt((err_pix_cnts[:,err_20_100]**2).sum(1))*(E[err_20_100][1]-E[err_20_100][0])
+    else :
+        err_20_100_total = 0
+
     if (len(exist_1000_2000[0]) != 0):
         err_1000_2000_total = np.sqrt((err_pix_cnts[:,err_1000_2000]**2).sum(1))*(E[err_1000_2000][1]-E[err_1000_2000][0])
     else :
         err_1000_2000_total = 0
 
-    err_pix_cnts_total = np.sqrt(err_100_500_total**2 + err_500_1000_total**2 + err_1000_2000_total**2) # dE is 5 from 100-500, 10 from 500-1000, 20 from 1000-2000
+        
+
+    err_pix_cnts_total = np.sqrt(err_20_100_total**2 + err_100_500_total**2 + err_500_1000_total**2 + err_1000_2000_total**2) # dE is 5 from 100-500, 10 from 500-1000, 20 from 1000-2000
 
     for i in range(16384):
         pix_cnts_total[i] = simps(pix_cnts[i,:], E)
@@ -586,7 +595,7 @@ def simulated_dph(grbdir,grid_dir,run_theta,run_phi,typ,t_src,alpha,beta,E0,A):
 
 # 7. Function to calculate the dph from data
 
-def evt2image(infile, tstart, tend):
+def evt2image(infile, tstart, tend, e_low, e_high):
     """
     Read an events file (with or without energy), and return a combined
     DPH for all 4 quadrants. 
@@ -596,8 +605,8 @@ def evt2image(infile, tstart, tend):
     hdu = fits.open(infile)
     pixel_edges = np.arange(-0.5, 63.6)
 
-    e_low = 100 # Energy cut lower bound 
-    e_high = 150 # Energy cut upper bound
+    #e_low = 200 # Energy cut lower bound 
+    #e_high = 2000 # Energy cut upper bound
 
     data = hdu[1].data[np.where( (hdu[1].data['Time'] >= tstart) & (hdu[1].data['Time'] <= tend) )]
     sel = (data['energy'] > e_low) & (data['energy'] < e_high)
@@ -632,13 +641,13 @@ def evt2image(infile, tstart, tend):
     return image
 
 
-def data_bkgd_image(grbdir,infile,pre_tstart,pre_tend,grb_tstart,grb_tend,post_tstart,post_tend):
+def data_bkgd_image(grbdir,infile,pre_tstart,pre_tend,grb_tstart,grb_tend,post_tstart,post_tend,e_low,e_high):
     """
     Creates source and background dph.
     """
-    predph = evt2image(infile,pre_tstart,pre_tend)
-    grbdph = evt2image(infile,grb_tstart,grb_tend)
-    postdph = evt2image(infile,post_tstart,post_tend)
+    predph = evt2image(infile,pre_tstart,pre_tend,e_low,e_high)
+    grbdph = evt2image(infile,grb_tstart,grb_tend,e_low,e_high)
+    postdph = evt2image(infile,post_tstart,post_tend,e_low,e_high)
 
     bkgddph = predph+postdph
 
@@ -686,7 +695,7 @@ def gen_inj_conf(data_dir,inj_dir,inject_theta,inject_phi,fluence,emin,emax,alph
 
     return conf_file
 
-def inject_grb(inject_theta,inject_phi,evt_file,grbdir,grid_dir,pre_tstart,pre_tend,post_tstart,post_tend,t_src,typ,alpha,beta,E0,fluence,emin,emax):
+def inject_grb(inject_theta,inject_phi,evt_file,grbdir,grid_dir,pre_tstart,pre_tend,post_tstart,post_tend,t_src,typ,alpha,beta,E0,fluence,emin,emax,e_low,e_high):
     """
     Injects a GRB in a given direction and gets the source (with noise) and background DPH
     
@@ -708,14 +717,14 @@ def inject_grb(inject_theta,inject_phi,evt_file,grbdir,grid_dir,pre_tstart,pre_t
 
     #grid_dir = "/home/arvind/Arvind/CZTIMassModel_tests/Localisation_test/injected_grb_plots/random_injected_grbs/randomgrbs"
 
-    sim_flat,sim_dph,badpix_mask,sim_err_dph = simulated_dph(grbdir,grid_dir,inject_theta,inject_phi,typ,t_src,alpha,beta,E0,norm)
+    sim_flat,sim_dph,badpix_mask,sim_err_dph = simulated_dph(grbdir,grid_dir,inject_theta,inject_phi,typ,t_src,alpha,beta,E0,norm,e_low,e_high)
     #print "######################## Sim Dph less than zero ##########################"
     #print np.where(sim_dph < 0)
     #print "##########################################################################"
     data_dph = np.random.poisson(sim_dph) # Poisson noise at each pixel
 
-    pre_dph = evt2image(evt_file,pre_tstart,pre_tend)
-    post_dph = evt2image(evt_file,post_tstart,post_tend)
+    pre_dph = evt2image(evt_file,pre_tstart,pre_tend,e_low,e_high)
+    post_dph = evt2image(evt_file,post_tstart,post_tend,e_low,e_high)
 
     t_bkgd = (pre_tend - pre_tstart) + (post_tend - post_tstart)
     noise_dph = ((pre_dph/(pre_tend - pre_tstart)) - (post_dph/(post_tend - post_tstart)))*t_src
@@ -752,7 +761,7 @@ def fit_line_int(model,scaling,intercept):
     return scaling*model + intercept
 
 
-def make_joint_table(joint_tab_filename,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,alpha=-1.0,beta=-2.5,E0=250,A=1):
+def make_joint_table(joint_tab_filename,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,e_low,e_high,alpha=-1.0,beta=-2.5,E0=250,A=1):
     """
     Make the joint table and calculate the fitting parameters
 
@@ -782,7 +791,7 @@ def make_joint_table(joint_tab_filename,grbdir,grid_dir,sel_theta_arr,sel_phi_ar
     no_dphs = len(sel_theta_arr)
 
     for loc in range(no_dphs):
-        loc_sim_flat,loc_sim_dph,badpix_mask,loc_sim_err_dph = simulated_dph(grbdir,grid_dir,sel_theta_arr[loc],sel_phi_arr[loc],typ,t_src,alpha,beta,E0,A)
+        loc_sim_flat,loc_sim_dph,badpix_mask,loc_sim_err_dph = simulated_dph(grbdir,grid_dir,sel_theta_arr[loc],sel_phi_arr[loc],typ,t_src,alpha,beta,E0,A,e_low,e_high)
 
         final_sim_dph = loc_sim_dph*badpix_mask
         final_sim_err_dph = loc_sim_err_dph*badpix_mask
@@ -856,7 +865,7 @@ def get_joint_fit_params(grb_name,joint_fit_file):
     return slope,intercept
 
 
-def calc_chi_sq(tab_filename,pdf_file,grb_name,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,do_joint_fit,joint_fit_file,alpha=-1.0,beta=-2.5,E0=250,A=1):
+def calc_chi_sq(tab_filename,pdf_file,grb_name,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,do_joint_fit,joint_fit_file,e_low,e_high,alpha=-1.0,beta=-2.5,E0=250,A=1):
     """
     Calculates chi_sq with and without scaling and writes in txt table. Plots all the sim dphs in the pdf_file.
 
@@ -886,7 +895,7 @@ def calc_chi_sq(tab_filename,pdf_file,grb_name,grbdir,grid_dir,sel_theta_arr,sel
     no_dphs = len(sel_theta_arr)
     
     for loc in range(no_dphs):
-        loc_sim_flat,loc_sim_dph,badpix_mask,loc_sim_err_dph = simulated_dph(grbdir,grid_dir,sel_theta_arr[loc],sel_phi_arr[loc],typ,t_src,alpha,beta,E0,A)
+        loc_sim_flat,loc_sim_dph,badpix_mask,loc_sim_err_dph = simulated_dph(grbdir,grid_dir,sel_theta_arr[loc],sel_phi_arr[loc],typ,t_src,alpha,beta,E0,A,e_low,e_high)
         
 	final_sim_dph = loc_sim_dph*badpix_mask
         final_sim_err_dph = loc_sim_err_dph*badpix_mask
@@ -1058,7 +1067,7 @@ def imscatter(x, y, image, ax=None, zoom=1):
     ax.autoscale()
     return artists
 
-def plot_sim_dph_png(grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,alpha,beta,E0,A):
+def plot_sim_dph_png(grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,alpha,beta,E0,A,e_low,e_high):
     """
     Makes png plots for all the selected points round the point of interest
 
@@ -1075,7 +1084,7 @@ def plot_sim_dph_png(grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,alpha,b
     """
     
     for i in range(len(sel_theta_arr)):
-        sim_flat,sim_dph,badpix_mask,sim_err_dph = simulated_dph(grbdir,grid_dir,sel_theta_arr[i],sel_phi_arr[i],typ,t_src,alpha,beta,E0,A)
+        sim_flat,sim_dph,badpix_mask,sim_err_dph = simulated_dph(grbdir,grid_dir,sel_theta_arr[i],sel_phi_arr[i],typ,t_src,alpha,beta,E0,A,e_low,e_high)
         pixbin = 16
         final_dph_binned = resample(sim_dph*badpix_mask,pixbin)
         fig = plt.figure()
@@ -1512,6 +1521,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("configfile", nargs="?", help="Path to configfile", type=str)
     parser.add_argument("radius", help="Radius (deg) around the central pixel to do chi_sq analysis",type=int)
+    parser.add_argument("e_low", help="Lower limit for the energy range over which the DPHs are to be made",type=float)
+    parser.add_argument("e_high", help="Upper limit for the energy range over which the DPHs are to be made",type=float)
     parser.add_argument("--do_inject_grb", help="Boolean to decide if artificial GRB should be injected or not",type=bool)
     parser.add_argument("--do_joint_fit", help="Boolean to decide whether to do joint fit or not",type=bool)
     parser.add_argument('--noloc', dest='noloc', action='store_true')
@@ -1546,6 +1557,8 @@ if __name__ == "__main__":
     comp_bin = int(runconf['comp_bin'])
     typ = runconf['typ']
     imsize = 128/runconf['pixsize']
+    e_low = args.e_low
+    e_high = args.e_high
 
     path_to_conf = infile.split("/") # Splitting to get the location of the data
 
@@ -1563,10 +1576,10 @@ if __name__ == "__main__":
     grid_dir = "/media/arvind/Elements/5th_Year_Project/massmodelgrid"
     depth = 4 # For now hard coded this. Let's see if we can make this better later
     
-    pdf_file = PdfPages(plotfile)
-    loc_txt_file = path_to_plotfile+"/"+grb_name+"_loc_table.txt"
-    joint_tab_file = path_to_plotfile+"/"+grb_name+"_joint_table.txt"
-    area_txt_file = path_to_plotfile+"/"+grb_name+"_area_table.txt"
+    pdf_file = PdfPages(plotfile.split(".")[0]+"_"+str(e_low)+"keV_"+str(e_high)+"keV.pdf")
+    loc_txt_file = path_to_plotfile+"/"+grb_name+"_"+str(e_low)+"keV_"+str(e_high)+"keV"+"_loc_table.txt"
+    joint_tab_file = path_to_plotfile+"/"+grb_name+"_"+str(e_low)+"keV_"+str(e_high)+"keV"+"_joint_table.txt"
+    area_txt_file = path_to_plotfile+"/"+grb_name+"_"+str(e_low)+"keV_"+str(e_high)+"keV"+"_area_table.txt"
 
     fluence = 4.8e-5
     emin = 10.0
@@ -1643,10 +1656,10 @@ if __name__ == "__main__":
 
 #   ##################### Plotting all sim dphs at the selected points ###############################
 #    if (args.do_inject_grb==False):
-#        plot_sim_dph_png(grbdir,grid_dir,grid_sel_theta_arr,grid_sel_phi_arr,typ,t_src,alpha,beta,E0,A)
+#        plot_sim_dph_png(grbdir,grid_dir,grid_sel_theta_arr,grid_sel_phi_arr,typ,t_src,alpha,beta,E0,A,e_low,e_high)
 #    else :
 #        t_src = 1.0
-#        plot_sim_dph_png(grbdir,grid_dir,grid_sel_theta_arr,grid_sel_phi_arr,typ,t_src,alpha,beta,E0,A)
+#        plot_sim_dph_png(grbdir,grid_dir,grid_sel_theta_arr,grid_sel_phi_arr,typ,t_src,alpha,beta,E0,A,e_low,e_high)
 #
 #   ##################################################################################################
 
@@ -1661,33 +1674,39 @@ if __name__ == "__main__":
 
     # Calling the function to get the data_dph 
     if (args.do_inject_grb==False):
-        flat_grb_dph,flat_bkgd_dph,grb_dph,bkgd_dph,t_src,t_tot = data_bkgd_image(grbdir,infile,pre_tstart,pre_tend,grb_tstart,grb_tend,post_tstart,post_tend)
+        flat_grb_dph,flat_bkgd_dph,grb_dph,bkgd_dph,t_src,t_tot = data_bkgd_image(grbdir,infile,pre_tstart,pre_tend,grb_tstart,grb_tend,post_tstart,post_tend,e_low,e_high)
         src_dph = grb_dph - bkgd_dph*t_src/t_tot
     else :
         t_src = 1.0
         print "############################# Injecting GRB at theta={t:0.2f}, phi={p:0.2f} ##########################".format(t=trans_theta,p=trans_phi)
-        src_dph, bkgd_dph, grb_dph, A = inject_grb(trans_theta,trans_phi,infile,grbdir,grid_dir,pre_tstart,pre_tend,post_tstart,post_tend,t_src,typ,alpha,beta,E0,fluence,emin,emax)
+        src_dph, bkgd_dph, grb_dph, A = inject_grb(trans_theta,trans_phi,infile,grbdir,grid_dir,pre_tstart,pre_tend,post_tstart,post_tend,t_src,typ,alpha,beta,E0,fluence,emin,emax,e_low,e_high)
     
-    sim_flat,sim_dph,badpix_mask,sim_err_dph = simulated_dph(grbdir,grid_dir,pix_theta,pix_phi,typ,t_src,alpha,beta,E0,A)
+    sim_flat,sim_dph,badpix_mask,sim_err_dph = simulated_dph(grbdir,grid_dir,pix_theta,pix_phi,typ,t_src,alpha,beta,E0,A,e_low,e_high)
       
-    # Plotting the badpix corrected dphs 
+    # Plotting the badpix corrected dphs
+
+    plot_sim_data_dphs(pdf_file,grb_name,trans_theta,trans_phi,pix_theta,pix_phi,sim_dph,grb_dph,bkgd_dph,badpix_mask,t_src,t_tot,1)
+
+    plot_sim_data_dphs(pdf_file,grb_name,trans_theta,trans_phi,pix_theta,pix_phi,sim_dph,grb_dph,bkgd_dph,badpix_mask,t_src,t_tot,4)
+
+    plot_sim_data_dphs(pdf_file,grb_name,trans_theta,trans_phi,pix_theta,pix_phi,sim_dph,grb_dph,bkgd_dph,badpix_mask,t_src,t_tot,8)
     
     plot_sim_data_dphs(pdf_file,grb_name,trans_theta,trans_phi,pix_theta,pix_phi,sim_dph,grb_dph,bkgd_dph,badpix_mask,t_src,t_tot,pixbin)
     
     print "========================================================================================"
 
-    # Plotting badpix masks (default and manual)
+    # Plotting badpix masks (default and manual) ######### Newly added (may have to remove this later) ######
 
-    manual_flag_badpix(pdf_file,grb_name,src_dph,badpix_mask)
+#    manual_flag_badpix(pdf_file,grb_name,src_dph,badpix_mask)
 
     # Joint fit 
 #    if (args.do_joint_fit==True):
 #
-#    	make_joint_table(joint_tab_file,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,alpha,beta,E0,A)
+#    	make_joint_table(joint_tab_file,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,e_low,e_high,alpha,beta,E0,A)
 
     # Calculating chi_sq before and after scaling
     
-    chi_sq_wo_sca_arr, chi_sq_sca_arr = calc_chi_sq(loc_txt_file,pdf_file,grb_name,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,args.do_joint_fit,joint_tab_file,alpha,beta,E0,A)
+#    chi_sq_wo_sca_arr, chi_sq_sca_arr = calc_chi_sq(loc_txt_file,pdf_file,grb_name,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,args.do_joint_fit,joint_tab_file,e_low,e_high,alpha,beta,E0,A)
     
 
     print "========================================================================================"
