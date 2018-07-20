@@ -510,7 +510,7 @@ def simulated_dph(grbdir,grid_dir,run_theta,run_phi,typ,t_src,alpha,beta,E0,A,e_
     err_100_500_total = np.sqrt((err_pix_cnts[:,err_100_500]**2).sum(1))*(E[err_100_500][1]-E[err_100_500][0])
     err_500_1000_total =  np.sqrt((err_pix_cnts[:,err_500_1000]**2).sum(1))*(E[err_500_1000][1]-E[err_500_1000][0])
 
-    if (len(exist_20_100[0]) != 0):
+    if (len(exist_20_100[0]) != 1):
         err_20_100_total = np.sqrt((err_pix_cnts[:,err_20_100]**2).sum(1))*(E[err_20_100][1]-E[err_20_100][0])
     else :
         err_20_100_total = 0
@@ -1701,8 +1701,8 @@ if __name__ == "__main__":
 
     # Joint fit 
 #    if (args.do_joint_fit==True):
-#
-#    	make_joint_table(joint_tab_file,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,e_low,e_high,alpha,beta,E0,A)
+
+    make_joint_table(joint_tab_file,grbdir,grid_dir,sel_theta_arr,sel_phi_arr,typ,t_src,e_low,e_high,alpha,beta,E0,A)
 
     # Calculating chi_sq before and after scaling
     
@@ -1726,7 +1726,7 @@ if __name__ == "__main__":
 #    area_table = Table([[s_1_ar],[s_2_ar],[s_3_ar],[per_90_ar],[per_99_ar],[s_1_ar_sca],[s_2_ar_sca],[s_3_ar_sca],[per_90_ar_sca],[per_99_ar_sca],[n_sigma_wo_sca],[n_sigma_sca],[percent_wo_sca],[percent_sca]], names=["s_1_ar","s_2_ar","s_3_ar","per_90_ar","per_99_ar","s_1_ar_sca","s_2_ar_sca","s_3_ar_sca","per_90_ar_sca","per_99_ar_sca","n_sigma_wo_sca","n_sigma_sca","percent_wo_sca","percent_sca"])
 #    area_table.write(area_txt_file,format="ascii")
 #  
-#    t1 = time.time()
-#
-#    t_final = t1-t0
-#    print "Time taken for the code to run (s) : ",t_final
+    t1 = time.time()
+
+    t_final = t1-t0
+    print "Time taken for the code to run (s) : ",t_final
