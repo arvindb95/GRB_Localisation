@@ -529,7 +529,8 @@ def simulated_dph(grbdir,grid_dir,run_theta,run_phi,typ,t_src,alpha,beta,E0,A,e_
         if (pix_cnts_total[i] < 0):
             pix_cnts_total[i] = simps(pix_cnts[i,:][::-1], E[::-1])
 
-    #print "################### Pix_cnts_total #################"
+    #print "####################################################"
+    ############## Pix_cnts_total #################"
     #print pix_cnts_total[np.where(pix_cnts_total < 0)[0][0]]
     #print pix_cnts[np.where(pix_cnts_total < 0)[0][0],:]
     #print simps(pix_cnts[np.where(pix_cnts_total < 0)[0][0],:][::-1],E[::-1])
@@ -1513,6 +1514,8 @@ def manual_flag_badpix(pdf_file,grb_name,src_dph,badpix_mask):
     pdf_file.savefig(f)  # saves the current figure into a pdf_file page
     return 0
 
+
+#def LLD_ULD_mask()
 
 ##################################### Main function begins #########################################
 
